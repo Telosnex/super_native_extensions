@@ -242,14 +242,18 @@ double _computeHitSlop(
   }
 }
 
-class _ImmediatePointerState extends MultiDragPointerState {
-  _ImmediatePointerState(
+class _DragPointerState extends MultiDragPointerState {
+  _DragPointerState(
       super.initialPosition, super.kind, super.gestureSettings);
+
+  Offset _cumulativeDelta = Offset.zero;
 
   @override
   void checkForResolutionAfterMove() {
     assert(pendingDelta != null);
-    if (pendingDelta!.distance > _computeHitSlop(kind, gestureSettings)) {
+    // Accumulate the total distance moved
+    _cumulativeDelta += pendingDelta!;
+    if (_cumulativeDelta.distance > _computeHitSlop(kind, gestureSettings)) {
       resolve(GestureDisposition.accepted);
     }
   }
@@ -260,19 +264,18 @@ class _ImmediatePointerState extends MultiDragPointerState {
   }
 }
 
-class _ImmediateMultiDragGestureRecognizer
-    extends ImmediateMultiDragGestureRecognizer {
+class _CustomMultiDragGestureRecognizer extends DelayedMultiDragGestureRecognizer {
   int? lastPointer;
 
   final LocationIsDraggable isLocationDraggable;
 
-  _ImmediateMultiDragGestureRecognizer({
+  _CustomMultiDragGestureRecognizer({
     required this.isLocationDraggable,
-  });
+  }) : super(delay: Duration.zero); // No delay, but still check slop
 
   @override
   MultiDragPointerState createNewPointerState(PointerDownEvent event) {
-    return _ImmediatePointerState(event.position, event.kind, gestureSettings);
+    return _DragPointerState(event.position, event.kind, gestureSettings);
   }
 
   @override
@@ -311,10 +314,10 @@ class DesktopDragDetector extends _DragDetector {
     final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
     return RawGestureDetector(
       gestures: {
-        _ImmediateMultiDragGestureRecognizer:
+        _CustomMultiDragGestureRecognizer:
             GestureRecognizerFactoryWithHandlers<
-                    _ImmediateMultiDragGestureRecognizer>(
-                () => _ImmediateMultiDragGestureRecognizer(
+                    _CustomMultiDragGestureRecognizer>(
+                () => _CustomMultiDragGestureRecognizer(
                     isLocationDraggable: isLocationDraggable), (recognizer) {
           recognizer.onStart = (offset) => maybeStartDrag(
                 context,
