@@ -1,0 +1,51 @@
+name: Build native artifacts
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {target: linux-x64, runner: ubuntu-22.04}
+          - {target: linux-arm64, runner: ubuntu-22.04}
+          - {target: linux-riscv64, runner: ubuntu-22.04}
+          - {target: macos-arm64, runner: macos-15}
+          - {target: macos-x64, runner: macos-15}
+          - {target: ios-arm64-iphoneos, runner: macos-15}
+          - {target: ios-arm64-iphonesimulator, runner: macos-15}
+          - {target: ios-x64-iphonesimulator, runner: macos-15}
+          - {target: android-arm, runner: ubuntu-22.04}
+          - {target: android-arm64, runner: ubuntu-22.04}
+          - {target: android-x64, runner: ubuntu-22.04}
+          - {target: windows-x64, runner: windows-2022}
+          - {target: windows-arm64, runner: windows-2022}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+        working-directory: super_native_extensions
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install pinned NDK
+        if: startsWith(matrix.target, 'android-')
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;28.2.13676358'
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
+      - name: Select Apple SDK
+        if: runner.os == 'macOS'
+        run: sudo xcode-select -s /Applications/Xcode_26.0.1.app/Contents/Developer
+      - name: Build Linux in pinned container
+        if: startsWith(matrix.target, 'linux-')
+        run: tool/build_native_linux_docker.sh '${{ matrix.target }}'
+      - name: Build native artifact
+        if: ${{ !startsWith(matrix.target, 'linux-') }}
+        run: tool/build_native_artifact.sh '${{ matrix.target }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sne-${{ matrix.target }}
+          path: super_native_extensions/native_artifacts/${{ matrix.target }}/
+          if-no-files-found: error
