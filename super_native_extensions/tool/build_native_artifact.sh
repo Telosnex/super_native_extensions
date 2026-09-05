@@ -33,7 +33,7 @@ key="$(echo "$triple" | tr '[:lower:]-' '[:upper:]_')"
 case "$target" in
   macos-*|ios-*)
     output="lib$name.dylib"
-    export "CARGO_TARGET_${key}_RUSTFLAGS=-C link-arg=-Wl,-install_name,@rpath/$output"
+    export "CARGO_TARGET_${key}_RUSTFLAGS=-C link-arg=-Wl,-install_name,@rpath/$output -C link-arg=-Wl,-headerpad_max_install_names"
     ;;
   android-*)
     ndk="${ANDROID_NDK_HOME:-$HOME/Library/Android/sdk/ndk/28.2.13676358}"
