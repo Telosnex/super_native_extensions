@@ -1,0 +1,2 @@
+# Artifact source hashes must match on Windows and Unix build hosts.
+super_native_extensions/rust/** text eol=lf

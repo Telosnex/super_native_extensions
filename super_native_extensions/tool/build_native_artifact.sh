@@ -27,7 +27,7 @@ case "$target" in
   *) echo "Usage: $0 <macos-{arm64,x64}|ios-arm64-{iphoneos,iphonesimulator}|ios-x64-iphonesimulator|android-{arm,arm64,x64}|linux-{arm64,x64,riscv64}|windows-{arm64,x64}>" >&2; exit 64 ;;
 esac
 # Avoid rust-toolchain.toml installing every cross target on each build host.
-rustup toolchain install "$rust" --profile minimal
+rustup toolchain install "$rust" --profile minimal --no-self-update
 rustup target add --toolchain "$rust" "$triple"
 key="$(echo "$triple" | tr '[:lower:]-' '[:upper:]_')"
 case "$target" in
@@ -51,8 +51,9 @@ case "$target" in
     export "CARGO_TARGET_${key}_LINKER=$cross-gcc"
     export "CC_${triple//-/_}=$cross-gcc"
     export PKG_CONFIG_ALLOW_CROSS=1
-    export PKG_CONFIG_LIBDIR="/usr/lib/$cross/pkgconfig:/usr/share/pkgconfig"
-    export "CARGO_TARGET_${key}_RUSTFLAGS=-C link-arg=-Wl,-soname,lib$name.so"
+    export PKG_CONFIG_LIBDIR="${SNE_SYSROOT:-}/usr/lib/$cross/pkgconfig:${SNE_SYSROOT:-}/usr/share/pkgconfig"
+    export PKG_CONFIG_SYSROOT_DIR="${SNE_SYSROOT:-/}"
+    export "CARGO_TARGET_${key}_RUSTFLAGS=-C link-arg=-Wl,-soname,lib$name.so ${SNE_SYSROOT:+-C link-arg=--sysroot=$SNE_SYSROOT}"
     output="lib$name.so"
     ;;
   windows-*) output="$name.dll" ;;
