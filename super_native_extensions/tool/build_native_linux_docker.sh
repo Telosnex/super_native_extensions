@@ -48,5 +48,6 @@ docker run --rm --platform linux/amd64 -v "$root/..:/repo" -w /repo/super_native
     fi
     curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
     export PATH="$HOME/.cargo/bin:$PATH"
+    git config --global --add safe.directory /repo
     tool/build_native_artifact.sh "$SNE_TARGET"
   '
