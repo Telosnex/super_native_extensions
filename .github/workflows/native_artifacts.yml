@@ -6,6 +6,11 @@ on:
         description: 'JSON array of target keys (defaults to the complete matrix)'
         default: '["linux-x64","linux-arm64","linux-riscv64","macos-arm64","macos-x64","ios-arm64-iphoneos","ios-arm64-iphonesimulator","ios-x64-iphonesimulator","android-arm","android-arm64","android-x64","windows-x64","windows-arm64"]'
         required: true
+      mode:
+        description: 'build, or verify existing Linux artifacts under native/QEMU loading'
+        type: choice
+        options: [build, verify]
+        default: build
 permissions:
   contents: read
 jobs:
@@ -15,6 +20,9 @@ jobs:
       matrix:
         target: ${{ fromJSON(inputs.targets) }}
     runs-on: ${{ startsWith(matrix.target, 'windows-') && 'windows-2022' || (startsWith(matrix.target, 'macos-') || startsWith(matrix.target, 'ios-')) && 'macos-15' || 'ubuntu-22.04' }}
+    env:
+      SNE_TARGET: ${{ matrix.target }}
+      SNE_MODE: ${{ inputs.mode }}
     timeout-minutes: 90
     defaults:
       run:
@@ -32,11 +40,12 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_26.0.1.app/Contents/Developer
       - name: Build Linux in pinned container
         if: startsWith(matrix.target, 'linux-')
-        run: tool/build_native_linux_docker.sh '${{ matrix.target }}'
+        run: tool/build_native_linux_docker.sh "$SNE_TARGET" "$SNE_MODE"
       - name: Build native artifact
-        if: ${{ !startsWith(matrix.target, 'linux-') }}
-        run: tool/build_native_artifact.sh '${{ matrix.target }}'
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: ${{ inputs.mode != 'verify' && !startsWith(matrix.target, 'linux-') }}
+        run: tool/build_native_artifact.sh "$SNE_TARGET"
+      - if: inputs.mode != 'verify'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: sne-${{ matrix.target }}
           path: super_native_extensions/native_artifacts/${{ matrix.target }}/

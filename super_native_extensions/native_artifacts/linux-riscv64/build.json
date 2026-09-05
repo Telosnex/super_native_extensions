@@ -1,0 +1,15 @@
+{
+  "path": "linux-riscv64/libsuper_native_extensions_native.so",
+  "sha256": "c190277f11ca1c906329f479bcf2c6037aa205b41f6f2cac0355c62865b0ab60",
+  "size": 1231208,
+  "source_sha256": "c41c7317507b4912602e3fc340f991dfb8143631d3bf7634df068c36782a246a",
+  "cargo_lock_sha256": "fce793c3610f0ca225788e1f86b0b8d30e5b860326ae9507b174906d3381e6e9",
+  "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+  "target": "riscv64gc-unknown-linux-gnu",
+  "host": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.35",
+  "image": "ubuntu:22.04@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f17df77c7dbc",
+  "load_smoke_test": false,
+  "toolchain": "riscv64-linux-gnu-gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0\nCopyright (C) 2021 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+  "ci_run": "https://github.com/Telosnex/super_native_extensions/actions/runs/33985591860",
+  "build_revision": "02a2c9bc2a51f127e90695a938660918ca21af71"
+}

@@ -19,7 +19,7 @@ dependencies:
   path: ^1.8.2
   uuid: ^4.1.0
   hooks: ^2.0.2
-  native_toolchain_rust: ^1.0.4+0
+  crypto: ^3.0.6
   irondash_engine_context: ^0.6.0-dev.0
   irondash_message_channel: ^0.8.0-dev.0
   device_info_plus: ">=10.0.1 <14.0.0"

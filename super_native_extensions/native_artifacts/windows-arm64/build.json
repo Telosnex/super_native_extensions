@@ -1,0 +1,15 @@
+{
+  "path": "windows-arm64/super_native_extensions_native.dll",
+  "sha256": "a1fd22f74f91271f5b04c595a6d8f75bac0688e8a67a13eaaf3ec7a316faf1b3",
+  "size": 742400,
+  "source_sha256": "c41c7317507b4912602e3fc340f991dfb8143631d3bf7634df068c36782a246a",
+  "cargo_lock_sha256": "fce793c3610f0ca225788e1f86b0b8d30e5b860326ae9507b174906d3381e6e9",
+  "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+  "target": "aarch64-pc-windows-msvc",
+  "host": "Windows-2022Server-10.0.20348-SP0",
+  "image": null,
+  "load_smoke_test": false,
+  "toolchain": "MSVC runner default",
+  "ci_run": "https://github.com/Telosnex/super_native_extensions/actions/runs/33985442226",
+  "build_revision": "b42a4582e5b431c9d06f185d40c75228bf8775fc"
+}

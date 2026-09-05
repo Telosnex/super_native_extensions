@@ -6,6 +6,9 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
+import tempfile
+import shutil
 import struct
 import subprocess
 import sys
@@ -70,6 +73,12 @@ def validate(target, file):
         expected = 'MACOS' if target.startswith('macos-') else ('IOSSIMULATOR' if target.endswith('iphonesimulator') else 'IOS')
         assert 'platform ' + expected in version
         exports = run('nm', '-gU', str(file))
+        # Flutter rewrites the install name to long build-directory paths for
+        # tests. The prebuilt must reserve Mach-O header space for this.
+        with tempfile.TemporaryDirectory() as directory:
+            copy = Path(directory) / file.name
+            shutil.copyfile(file, copy)
+            run('install_name_tool', '-id', '/test/' + 'x' * 220 + '/' + file.name, str(copy))
     else:
         assert data[:2] == b'MZ'
         pe = struct.unpack_from('<I', data, 0x3c)[0]
@@ -77,10 +86,12 @@ def validate(target, file):
         assert struct.unpack_from('<H', data, pe + 4)[0] == {'arm64': 0xaa64, 'x64': 0x8664}[arch], 'PE machine mismatch'
         # llvm-readobj is available on the Windows Actions runner.
         exports = run('llvm-readobj', '--coff-exports', str(file))
-    assert 'super_native_extensions_init_message_channel_context' in exports
+    def has_symbol(symbol):
+        return re.search(r'(?:^|\s)_?' + re.escape(symbol) + r'(?:\s|$)', exports) is not None
+    assert has_symbol('super_native_extensions_init_message_channel_context')
     init = ('Java_com_superlist_super_1native_1extensions_SuperNativeExtensionsPlugin_init'
             if target.startswith('android-') else 'super_native_extensions_init')
-    assert init in exports, 'Missing platform init export'
+    assert has_symbol(init), 'Missing platform init export'
     # Load + symbol lookup only: calling init requires an actual Flutter engine.
     host_os = {'darwin': 'macos', 'linux': 'linux', 'win32': 'windows'}.get(sys.platform)
     host_arch = {'arm64': 'arm64', 'aarch64': 'arm64', 'x86_64': 'x64', 'AMD64': 'x64', 'riscv64': 'riscv64'}.get(platform.machine())
@@ -107,6 +118,7 @@ def record(target, triple, file):
         'target': triple,
         'host': platform.platform(),
         'image': os.environ.get('SNE_BUILD_IMAGE'),
+        'runner_image': os.environ.get('ImageVersion'),
         'load_smoke_test': smoke,
     }
     if target.startswith(('macos-', 'ios-')):
@@ -121,7 +133,7 @@ def record(target, triple, file):
     print(json.dumps(metadata, indent=2))
 
 
-def assemble():
+def assemble(verify=False):
     artifacts = {}
     source = source_digest()
     for target in sorted(TARGETS):
@@ -133,15 +145,28 @@ def assemble():
     manifest = {'schema': 1, 'profile': 1, 'sources': {
         'rust_source_sha256': source,
         'cargo_lock_sha256': digest(ROOT / 'rust/Cargo.lock'),
-    }, 'toolchains': {'rust': '1.97.1'}, 'artifacts': artifacts}
-    (DIRECTORY / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
-    print(f'Assembled {len(artifacts)} verified artifacts')
+    }, 'toolchains': {
+        'rust': '1.97.1',
+        'apple': 'Xcode 26.0.1; macOS 12, iOS 13 (arm64 simulator 14)',
+        'android': 'NDK 28.2.13676358; API 24; 16KB pages',
+        'linux': 'Debian bullseye snapshot 20260801T000000Z; GCC 10; glibc 2.31',
+        'linux-riscv64': 'Ubuntu 22.04 target sysroot; GCC 11; glibc 2.35',
+        'windows': 'Windows Server 2022 Actions runner; MSVC (see build.json)',
+    }, 'artifacts': artifacts}
+    if verify:
+        assert manifest == json.loads((DIRECTORY / 'manifest.json').read_text()), 'Manifest differs from build provenance'
+        print(f'Verified source, provenance, and all {len(artifacts)} artifacts')
+    else:
+        (DIRECTORY / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+        print(f'Assembled {len(artifacts)} verified artifacts')
 
 
 if __name__ == '__main__':
     if sys.argv[1:] == ['assemble']:
         assemble()
+    elif sys.argv[1:] == ['verify']:
+        assemble(verify=True)
     elif len(sys.argv) == 5 and sys.argv[1] == 'record':
         record(*sys.argv[2:])
     else:
-        sys.exit('Usage: native_artifacts.py record <target> <triple> <file> | assemble')
+        sys.exit('Usage: native_artifacts.py record <target> <triple> <file> | assemble | verify')

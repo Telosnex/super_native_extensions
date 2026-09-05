@@ -1,0 +1,15 @@
+{
+  "path": "linux-x64/libsuper_native_extensions_native.so",
+  "sha256": "e9324bd030fd2cd07b01fb679bd87459b434fd0f4c65f5d8c4844857fdec3f68",
+  "size": 1311400,
+  "source_sha256": "c41c7317507b4912602e3fc340f991dfb8143631d3bf7634df068c36782a246a",
+  "cargo_lock_sha256": "fce793c3610f0ca225788e1f86b0b8d30e5b860326ae9507b174906d3381e6e9",
+  "rust": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+  "target": "x86_64-unknown-linux-gnu",
+  "host": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.31",
+  "image": "debian:bullseye-slim@sha256:cba95a21c96c1f5fc2470081829363eed57706634f7dc26e8c6712934303d57a",
+  "load_smoke_test": true,
+  "toolchain": "x86_64-linux-gnu-gcc (Debian 10.2.1-6) 10.2.1 20210110\nCopyright (C) 2020 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+  "ci_run": "https://github.com/Telosnex/super_native_extensions/actions/runs/33985591860",
+  "build_revision": "02a2c9bc2a51f127e90695a938660918ca21af71"
+}

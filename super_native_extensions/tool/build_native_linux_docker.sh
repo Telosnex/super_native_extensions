@@ -2,6 +2,8 @@
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 target="${1:-}"
+mode="${2:-build}"
+case "$mode" in build|verify) ;; *) echo "Mode must be build or verify" >&2; exit 64 ;; esac
 case "$target" in
   linux-x64|linux-arm64) image='debian:bullseye-slim@sha256:cba95a21c96c1f5fc2470081829363eed57706634f7dc26e8c6712934303d57a' ;;
   linux-riscv64) image='ubuntu:22.04@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f17df77c7dbc' ;;
@@ -9,7 +11,7 @@ case "$target" in
 esac
 # Build with a native x64 compiler and a target GTK sysroot; no emulated Rust.
 docker run --rm --platform linux/amd64 -v "$root/..:/repo" -w /repo/super_native_extensions \
-  -e SNE_TARGET="$target" -e SNE_BUILD_IMAGE="$image" "$image" bash -lc '
+  -e SNE_TARGET="$target" -e SNE_MODE="$mode" -e SNE_BUILD_IMAGE="$image" "$image" bash -lc '
     set -euo pipefail
     export DEBIAN_FRONTEND=noninteractive
     if [[ "$SNE_TARGET" != linux-riscv64 ]]; then
@@ -46,8 +48,20 @@ docker run --rm --platform linux/amd64 -v "$root/..:/repo" -w /repo/super_native
     else
       apt-get install -y --no-install-recommends "libgtk-3-dev:$arch"
     fi
-    curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
-    export PATH="$HOME/.cargo/bin:$PATH"
-    git config --global --add safe.directory /repo
-    tool/build_native_artifact.sh "$SNE_TARGET"
+    if [[ "$SNE_MODE" == build ]]; then
+      curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
+      export PATH="$HOME/.cargo/bin:$PATH"
+      git config --global --add safe.directory /repo
+      tool/build_native_artifact.sh "$SNE_TARGET"
+    fi
+    # Validate actual dynamic dependencies on the target ABI, not just ELF
+    # headers. QEMU is only used by maintainers/CI, never by consumer hooks.
+    apt-get install -y --no-install-recommends qemu-user
+    "$cross-gcc" ${SNE_SYSROOT:+--sysroot="$SNE_SYSROOT"} tool/smoke_native_library.c -ldl -o /tmp/sne-smoke
+    binary="$(pwd)/native_artifacts/$SNE_TARGET/libsuper_native_extensions_native.so"
+    case "$arch" in
+      amd64) /tmp/sne-smoke "$binary" ;;
+      arm64) qemu-aarch64 -L /usr/aarch64-linux-gnu /tmp/sne-smoke "$binary" ;;
+      riscv64) qemu-riscv64 -L "$SNE_SYSROOT" /tmp/sne-smoke "$binary" ;;
+    esac
   '

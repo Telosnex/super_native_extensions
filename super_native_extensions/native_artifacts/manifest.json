@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "profile": 1,
+  "sources": {
+    "rust_source_sha256": "c41c7317507b4912602e3fc340f991dfb8143631d3bf7634df068c36782a246a",
+    "cargo_lock_sha256": "fce793c3610f0ca225788e1f86b0b8d30e5b860326ae9507b174906d3381e6e9"
+  },
+  "toolchains": {
+    "rust": "1.97.1",
+    "apple": "Xcode 26.0.1; macOS 12, iOS 13 (arm64 simulator 14)",
+    "android": "NDK 28.2.13676358; API 24; 16KB pages",
+    "linux": "Debian bullseye snapshot 20260801T000000Z; GCC 10; glibc 2.31",
+    "linux-riscv64": "Ubuntu 22.04 target sysroot; GCC 11; glibc 2.35",
+    "windows": "Windows Server 2022 Actions runner; MSVC (see build.json)"
+  },
+  "artifacts": {
+    "android-arm": {
+      "path": "android-arm/libsuper_native_extensions_native.so",
+      "sha256": "6c2643540e3b9bccedee657a670e35b9ca64d50d371530d7003236036e34a97c"
+    },
+    "android-arm64": {
+      "path": "android-arm64/libsuper_native_extensions_native.so",
+      "sha256": "b299c2ff3f4e57479576d970763532605f4e925d0f47841d59a9054001f20b29"
+    },
+    "android-x64": {
+      "path": "android-x64/libsuper_native_extensions_native.so",
+      "sha256": "21a264fca46129a58a8e6a35d8319ffa7ef072100259186bb86a460e29122185"
+    },
+    "ios-arm64-iphoneos": {
+      "path": "ios-arm64-iphoneos/libsuper_native_extensions_native.dylib",
+      "sha256": "1902e18976ff212e5af87887b2cdd5d37bfb8b32f6e1ad1218c0d25faf8b65cb"
+    },
+    "ios-arm64-iphonesimulator": {
+      "path": "ios-arm64-iphonesimulator/libsuper_native_extensions_native.dylib",
+      "sha256": "f7728e22b662304f735d14f49f9da1bc09575f8fdfdc2a3983d19532a9311d19"
+    },
+    "ios-x64-iphonesimulator": {
+      "path": "ios-x64-iphonesimulator/libsuper_native_extensions_native.dylib",
+      "sha256": "6a0f39d93f678f5826d25129a434d1549052fa6a9203cf4cc64db23b1d0aae21"
+    },
+    "linux-arm64": {
+      "path": "linux-arm64/libsuper_native_extensions_native.so",
+      "sha256": "cae1ca05135ba653227c1e7954a8bdb15ce2a2cf52290145c195470616b25dc0"
+    },
+    "linux-riscv64": {
+      "path": "linux-riscv64/libsuper_native_extensions_native.so",
+      "sha256": "c190277f11ca1c906329f479bcf2c6037aa205b41f6f2cac0355c62865b0ab60"
+    },
+    "linux-x64": {
+      "path": "linux-x64/libsuper_native_extensions_native.so",
+      "sha256": "e9324bd030fd2cd07b01fb679bd87459b434fd0f4c65f5d8c4844857fdec3f68"
+    },
+    "macos-arm64": {
+      "path": "macos-arm64/libsuper_native_extensions_native.dylib",
+      "sha256": "4be7c22058d6c860c084cc2feb643f5bf6132324ab389b84dcf5b37b6e2b8f87"
+    },
+    "macos-x64": {
+      "path": "macos-x64/libsuper_native_extensions_native.dylib",
+      "sha256": "27e10ecc2591607bc173f1ff9a72b3f7267810882dff443e7648de4ea1600679"
+    },
+    "windows-arm64": {
+      "path": "windows-arm64/super_native_extensions_native.dll",
+      "sha256": "a1fd22f74f91271f5b04c595a6d8f75bac0688e8a67a13eaaf3ec7a316faf1b3"
+    },
+    "windows-x64": {
+      "path": "windows-x64/super_native_extensions_native.dll",
+      "sha256": "0e6ac54df33a36c81139c701517c52ded44bb13dcf79e62a6829ed43e70fe926"
+    }
+  }
+}
