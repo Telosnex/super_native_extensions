@@ -101,3 +101,12 @@ cross-built/structurally checked, not device-runtime tested by this workflow.
 
 SNE's license is in `../LICENSE`; locked crate licenses/notices are collected
 in `THIRD_PARTY_NOTICES.md`. Retain those when redistributing the binaries.
+
+## Initial acceptance
+
+All 13 artifacts were built and verified. The committed Linux x64, ARM64, and
+RISC-V libraries passed actual load/entrypoint lookup (native/QEMU) in
+[run 33986133800](https://github.com/Telosnex/super_native_extensions/actions/runs/33986133800).
+The package analyzer and 25 tests passed, including hook selection against every
+real committed artifact. Telosnex built successfully for web, macOS release,
+iOS release without codesigning, and flutter-pi (with SNE correctly omitted).

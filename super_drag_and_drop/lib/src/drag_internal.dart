@@ -243,8 +243,7 @@ double _computeHitSlop(
 }
 
 class _DragPointerState extends MultiDragPointerState {
-  _DragPointerState(
-      super.initialPosition, super.kind, super.gestureSettings);
+  _DragPointerState(super.initialPosition, super.kind, super.gestureSettings);
 
   Offset _cumulativeDelta = Offset.zero;
 
@@ -264,7 +263,8 @@ class _DragPointerState extends MultiDragPointerState {
   }
 }
 
-class _CustomMultiDragGestureRecognizer extends DelayedMultiDragGestureRecognizer {
+class _CustomMultiDragGestureRecognizer
+    extends DelayedMultiDragGestureRecognizer {
   int? lastPointer;
 
   final LocationIsDraggable isLocationDraggable;
@@ -314,11 +314,10 @@ class DesktopDragDetector extends _DragDetector {
     final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
     return RawGestureDetector(
       gestures: {
-        _CustomMultiDragGestureRecognizer:
-            GestureRecognizerFactoryWithHandlers<
-                    _CustomMultiDragGestureRecognizer>(
-                () => _CustomMultiDragGestureRecognizer(
-                    isLocationDraggable: isLocationDraggable), (recognizer) {
+        _CustomMultiDragGestureRecognizer: GestureRecognizerFactoryWithHandlers<
+                _CustomMultiDragGestureRecognizer>(
+            () => _CustomMultiDragGestureRecognizer(
+                isLocationDraggable: isLocationDraggable), (recognizer) {
           recognizer.onStart = (offset) => maybeStartDrag(
                 context,
                 recognizer.lastPointer,
