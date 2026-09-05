@@ -1,6 +1,11 @@
 name: Build native artifacts
 on:
   workflow_dispatch:
+    inputs:
+      targets:
+        description: 'JSON array of target keys (defaults to the complete matrix)'
+        default: '["linux-x64","linux-arm64","linux-riscv64","macos-arm64","macos-x64","ios-arm64-iphoneos","ios-arm64-iphonesimulator","ios-x64-iphonesimulator","android-arm","android-arm64","android-x64","windows-x64","windows-arm64"]'
+        required: true
 permissions:
   contents: read
 jobs:
@@ -8,21 +13,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - {target: linux-x64, runner: ubuntu-22.04}
-          - {target: linux-arm64, runner: ubuntu-22.04}
-          - {target: linux-riscv64, runner: ubuntu-22.04}
-          - {target: macos-arm64, runner: macos-15}
-          - {target: macos-x64, runner: macos-15}
-          - {target: ios-arm64-iphoneos, runner: macos-15}
-          - {target: ios-arm64-iphonesimulator, runner: macos-15}
-          - {target: ios-x64-iphonesimulator, runner: macos-15}
-          - {target: android-arm, runner: ubuntu-22.04}
-          - {target: android-arm64, runner: ubuntu-22.04}
-          - {target: android-x64, runner: ubuntu-22.04}
-          - {target: windows-x64, runner: windows-2022}
-          - {target: windows-arm64, runner: windows-2022}
-    runs-on: ${{ matrix.runner }}
+        target: ${{ fromJSON(inputs.targets) }}
+    runs-on: ${{ startsWith(matrix.target, 'windows-') && 'windows-2022' || (startsWith(matrix.target, 'macos-') || startsWith(matrix.target, 'ios-')) && 'macos-15' || 'ubuntu-22.04' }}
     timeout-minutes: 90
     defaults:
       run:

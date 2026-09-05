@@ -12,6 +12,14 @@ docker run --rm --platform linux/amd64 -v "$root/..:/repo" -w /repo/super_native
   -e SNE_TARGET="$target" -e SNE_BUILD_IMAGE="$image" "$image" bash -lc '
     set -euo pipefail
     export DEBIAN_FRONTEND=noninteractive
+    if [[ "$SNE_TARGET" != linux-riscv64 ]]; then
+      # Immutable package indexes: bullseye security packages disappear from
+      # rolling mirrors after superseding updates.
+      printf "%s\n" \
+        "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260801T000000Z bullseye main" \
+        "deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20260801T000000Z bullseye-security main" \
+        > /etc/apt/sources.list
+    fi
     case "$SNE_TARGET" in
       linux-x64) arch=amd64; cross=x86_64-linux-gnu ;;
       linux-arm64) arch=arm64; cross=aarch64-linux-gnu; dpkg --add-architecture arm64 ;;
