@@ -76,12 +76,16 @@ jobs:
         run: |
           { yes || true; } | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" > /dev/null
           test -d "$ANDROID_HOME/ndk/$NDK_VERSION"
-      # The package depends on Flutter, so pub needs the Flutter SDK.
+      # The package depends on Flutter, so pub needs the Flutter SDK. A git
+      # clone of the tag: third-party setup actions use unpinned actions,
+      # which this organization does not allow.
       - &flutter
-        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
+        name: Install Flutter
+        working-directory: .
+        run: |
+          git clone -q --depth 1 -b "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter/bin/flutter" --version
       - name: Describe the toolchain
         id: toolchain
         run: |
