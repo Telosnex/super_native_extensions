@@ -26,11 +26,6 @@ jobs:
         run: melos bootstrap
       - name: Flutter Format
         run: melos exec -c 1 dart format . --output=none --set-exit-if-changed
-      - name: Verify committed native artifacts
-        working-directory: super_native_extensions
-        run: |
-          python3 tool/native_artifacts.py verify
-          dart run tool/verify_artifacts.dart
       - name: Flutter Analyze
         run: melos exec -c 1 flutter analyze
       - name: Futter Test

@@ -1,0 +1,17 @@
+# The library is built from rust/, hook/build.dart, pubspec.yaml and
+# tool/build_native_artifact.sh (native_prebuilt ADR 001 §5). The platform
+# plugin directories build with the app, not with the hook.
+analysis_options.yaml
+melos_super_native_extensions.iml
+android/
+ios/
+linux/
+macos/
+windows/
+native_artifacts/README.md
+native_artifacts/THIRD_PARTY_NOTICES.md
+tool/build_native_linux_docker.sh
+tool/generate_native_notices.py
+tool/smoke_native_library.c
+tool/install_linux_build_toolchain.sh
+tool/smoke_linux_library.sh

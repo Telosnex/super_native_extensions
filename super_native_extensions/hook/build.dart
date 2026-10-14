@@ -1,120 +1,201 @@
+/// Bundles the super_native_extensions Rust library as a Dart code asset.
+///
+/// With package:native_prebuilt (native_prebuilt ADR 001), the hook downloads
+/// the library from the GitHub release in native_artifacts/prebuilt.json when
+/// the package sources match it (user define `native_build`: auto, download or
+/// source). Otherwise it runs tool/build_native_artifact.sh, which needs
+/// rustup and the target's C toolchain (see that script). User defines:
+/// `sysroot` for a cross build, and `rust_toolchain: host` builds with the cargo on PATH instead of rustup,
+/// for builds without network (Flatpak).
+library;
+
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:code_assets/code_assets.dart';
 import 'package:crypto/crypto.dart';
 import 'package:hooks/hooks.dart';
+import 'package:native_prebuilt/native_prebuilt.dart';
 
 const _assetName = 'super_native_extensions_native';
 
-final class _Artifact {
-  const _Artifact({required this.path, required this.sha256});
+const _targets = {
+  'android-arm',
+  'android-arm64',
+  'android-x64',
+  'ios-arm64-iphoneos',
+  'ios-arm64-iphonesimulator',
+  'ios-x64-iphonesimulator',
+  'linux-arm64',
+  'linux-riscv64',
+  'linux-x64',
+  'macos-arm64',
+  'macos-x64',
+  'windows-arm64',
+  'windows-x64',
+};
 
-  factory _Artifact.fromJson(Object? value, String key) {
-    if (value case {'path': final String path, 'sha256': final String sha256}) {
-      if (RegExp(r'^[0-9a-f]{64}$').hasMatch(sha256) &&
-          path.split('/').length == 2 &&
-          !path.contains('..') &&
-          !path.contains('\\') &&
-          path.startsWith('$key/')) {
-        return _Artifact(path: path, sha256: sha256);
-      }
+void main(List<String> args) async {
+  await build(args, (input, output) async {
+    if (!input.config.buildCodeAssets) return;
+
+    // flutter-pi has no GTK plugin registrant or GDK display. Its
+    // capability-gated app does not need the library.
+    final code = input.config.code;
+    final skipLinuxArm64 =
+        input.userDefines['skip_linux_arm64_native_build'] == true &&
+        code.targetOS == OS.linux &&
+        code.targetArchitecture == Architecture.arm64 &&
+        code.cCompiler?.compiler.toFilePath().contains(
+              '/.native-assets-toolchain/',
+            ) ==
+            true;
+    if (skipLinuxArm64) return;
+
+    // Production assets are dynamic libraries. A soft preference for static
+    // can use dynamic; a strict request cannot.
+    if (code.linkModePreference == LinkModePreference.static) {
+      throw UnsupportedError('SNE supports dynamic linking only.');
     }
-    throw FormatException('Invalid native artifact manifest entry for $key.');
-  }
 
-  final String path;
-  final String sha256;
+    final stopwatch = Stopwatch()..start();
+    final target = TargetName.of(code);
+    if (!_targets.contains(target.name)) {
+      throw UnsupportedError(
+        'super_native_extensions has no native library for $target. '
+        'Supported targets: ${_targets.join(', ')}.',
+      );
+    }
+    await NativePrebuilt(
+      input: input,
+      output: output,
+      log: _log,
+    ).run((_) => _buildFromSource(input, output, target));
+    _log('Hook completed in ${_formatDuration(stopwatch.elapsed)}');
+  });
 }
 
-Future<void> main(List<String> args) => build(args, buildArtifacts);
+void _log(String message) =>
+    stderr.writeln('[super_native_extensions] $message');
 
-Future<void> buildArtifacts(BuildInput input, BuildOutputBuilder output) async {
-  if (!input.config.buildCodeAssets) return;
-
-  // flutter-pi has no GTK plugin registrant or GDK display. Keep this before
-  // manifest access: its capability-gated app does not need an SNE artifact.
-  final skipLinuxArm64 =
-      input.userDefines['skip_linux_arm64_native_build'] == true &&
-      input.config.code.targetOS == OS.linux &&
-      input.config.code.targetArchitecture == Architecture.arm64 &&
-      input.config.code.cCompiler?.compiler.toFilePath().contains(
-            '/.native-assets-toolchain/',
-          ) ==
-          true;
-  if (skipLinuxArm64) return;
-
-  // Like image_ffmpeg and zxing_dart, production assets are dynamic libraries.
-  // A soft preference for static can use dynamic; a strict request cannot.
-  if (input.config.code.linkModePreference == LinkModePreference.static) {
-    throw UnsupportedError('SNE prebuilts support dynamic linking only.');
-  }
-
-  final manifestFile = File.fromUri(
-    input.packageRoot.resolve('native_artifacts/manifest.json'),
+Future<void> _buildFromSource(
+  BuildInput input,
+  BuildOutputBuilder output,
+  TargetName target,
+) async {
+  final shared = input.outputDirectoryShared;
+  final hostToolchain = input.userDefines['rust_toolchain'] == 'host';
+  final library = File.fromUri(
+    input.outputDirectory.resolve(
+      target.os.dylibFileName('super_native_extensions_native'),
+    ),
   );
-  final manifest = jsonDecode(await manifestFile.readAsString());
-  if (manifest is! Map<String, Object?> || manifest['schema'] != 1) {
-    throw const FormatException('Unsupported native artifact manifest.');
-  }
-  final encodedArtifacts = manifest['artifacts'];
-  if (encodedArtifacts is! Map<String, Object?>) {
-    throw const FormatException('Native artifact manifest has no artifacts.');
-  }
+  await Directory.fromUri(input.outputDirectory).create(recursive: true);
 
-  final os = input.config.code.targetOS;
-  final architecture = input.config.code.targetArchitecture;
-  final sdkSuffix = os == OS.iOS
-      ? switch (input.config.code.iOS.targetSdk) {
-          IOSSdk.iPhoneOS => '-iphoneos',
-          IOSSdk.iPhoneSimulator => '-iphonesimulator',
-          final sdk => throw UnsupportedError('Unsupported iOS SDK: $sdk.'),
-        }
-      : '';
-  final key = '${os.name}-${architecture.name}$sdkSuffix';
-  final encodedArtifact = encodedArtifacts[key];
-  if (encodedArtifact == null) {
-    throw UnsupportedError(
-      'super_native_extensions has no pinned native artifact for $key. Supported targets: '
-      '${encodedArtifacts.keys.join(', ')}.',
-    );
-  }
-  final artifact = _Artifact.fromJson(encodedArtifact, key);
-
-  final source = File.fromUri(
-    input.packageRoot.resolve('native_artifacts/${artifact.path}'),
+  // One Cargo target directory per target and toolchain mode. Cargo locks it
+  // itself, but the lock keeps two app builds from racing on the output.
+  final script = await File.fromUri(
+    input.packageRoot.resolve('tool/build_native_artifact.sh'),
+  ).readAsString();
+  final environment = {
+    'SNE_OUTPUT': library.path,
+    if (hostToolchain) 'SNE_RUST_TOOLCHAIN': 'host',
+    // A target sysroot for cross builds (linux-riscv64 in the release).
+    if (input.userDefines['sysroot'] case final String sysroot)
+      'SNE_SYSROOT': sysroot,
+    if (target.os == OS.android) 'ANDROID_NDK_HOME': ?_androidNdk(),
+  };
+  final buildKey = sha256
+      .convert(
+        utf8.encode(
+          jsonEncode([
+            target.name,
+            hostToolchain,
+            environment['SNE_SYSROOT'],
+            script,
+          ]),
+        ),
+      )
+      .toString()
+      .substring(0, 16);
+  final targetDir = shared.resolve('cargo/${target.name}-$buildKey/');
+  environment['SNE_CARGO_TARGET_DIR'] = targetDir.toFilePath();
+  await _withLock(
+    File.fromUri(shared.resolve('cargo/${target.name}-$buildKey.lock')),
+    () => _run(
+      'Building $target',
+      input.packageRoot,
+      ['tool/build_native_artifact.sh', target.name],
+      environment,
+    ),
   );
-  if (!await source.exists()) {
-    throw StateError(
-      'Pinned super_native_extensions artifact is missing: ${source.path}. Reinstall the '
-      'package or rebuild it with the matching tool/build_* script.',
-    );
-  }
-  final digest = (await sha256.bind(source.openRead()).first).toString();
-  if (digest != artifact.sha256) {
-    throw StateError(
-      'SHA-256 mismatch for ${source.path}: expected ${artifact.sha256}, '
-      'got $digest.',
-    );
-  }
-
-  final outputDirectory = Directory.fromUri(input.outputDirectory);
-  await outputDirectory.create(recursive: true);
-  final outputName = os.dylibFileName('super_native_extensions_native');
-  final published = File.fromUri(input.outputDirectory.resolve(outputName));
-  await source.copy(published.path);
 
   output.assets.code.add(
     CodeAsset(
       package: input.packageName,
       name: _assetName,
       linkMode: DynamicLoadingBundled(),
-      file: published.uri,
+      file: library.uri,
     ),
   );
-  output.dependencies.addAll([
-    input.packageRoot.resolve('hook/build.dart'),
-    manifestFile.uri,
-    source.uri,
-  ]);
+}
+
+/// The pinned NDK of the release builds, if it is installed.
+String? _androidNdk() {
+  final env = Platform.environment;
+  final home = env['HOME'];
+  for (final sdk in [
+    ?env['ANDROID_HOME'],
+    ?env['ANDROID_SDK_ROOT'],
+    if (home != null) ...['$home/Library/Android/sdk', '$home/Android/Sdk'],
+  ]) {
+    final ndk = '$sdk/ndk/28.2.13676358';
+    if (File('$ndk/source.properties').existsSync()) return ndk;
+  }
+  return env['ANDROID_NDK_HOME'];
+}
+
+Future<void> _run(
+  String what,
+  Uri packageRoot,
+  List<String> bashArguments,
+  Map<String, String> environment,
+) async {
+  _log(what);
+  final stopwatch = Stopwatch()..start();
+  // bash runs the script, so the file mode of a checkout does not matter.
+  final process = await Process.start(
+    'bash',
+    bashArguments,
+    workingDirectory: packageRoot.toFilePath(),
+    environment: environment,
+    mode: ProcessStartMode.inheritStdio,
+  );
+  final exitCode = await process.exitCode;
+  if (exitCode != 0) {
+    throw StateError(
+      'super_native_extensions: ${bashArguments.join(' ')} failed with exit '
+      'code $exitCode.',
+    );
+  }
+  _log('$what took ${_formatDuration(stopwatch.elapsed)}');
+}
+
+Future<T> _withLock<T>(File lockFile, Future<T> Function() action) async {
+  await lockFile.parent.create(recursive: true);
+  final handle = await lockFile.open(mode: FileMode.append);
+  try {
+    await handle.lock(FileLock.blockingExclusive);
+    return await action();
+  } finally {
+    await handle.close();
+  }
+}
+
+String _formatDuration(Duration duration) {
+  final millis = duration.inMilliseconds;
+  if (millis < 1000) return '${millis}ms';
+  final seconds = duration.inSeconds;
+  if (seconds < 60) return '$seconds.${(millis % 1000) ~/ 100}s';
+  return '${seconds ~/ 60}m ${seconds % 60}s';
 }

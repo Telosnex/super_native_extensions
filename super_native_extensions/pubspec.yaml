@@ -25,6 +25,10 @@ dependencies:
   device_info_plus: ">=10.0.1 <14.0.0"
   pixel_snap: ^0.1.2
   web: ^1.0.0
+  native_prebuilt:
+    git:
+      url: https://github.com/Telosnex/native_prebuilt.git
+      ref: bf489921cbd79f96a41d3ac08d88df6cdab97366
 
 dev_dependencies:
   flutter_test:

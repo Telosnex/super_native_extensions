@@ -1,0 +1,287 @@
+# Builds the super_native_extensions library for every target and publishes
+# them as one GitHub release (native_prebuilt ADR 001 D5, D6, D8). Start it
+# with
+#   git push -f origin HEAD:native-release       (release)
+#   git push -f origin HEAD:native-release-dry   (build only, no upload)
+# or with workflow_dispatch. On success it pushes the branch
+# native-manifest/<tag> with super_native_extensions/native_artifacts/
+# prebuilt.json. Merge that branch to use the release.
+#
+# Every job runs the hook's source build: `dart run native_prebuilt:build`.
+# Linux builds in pinned containers (tool/install_linux_build_toolchain.sh):
+# linux-x64 and linux-arm64 natively in Debian bullseye (glibc 2.31), and
+# linux-riscv64 cross in Ubuntu 22.04 with a target sysroot.
+name: native release
+run-name: Native release / ${{ (github.ref_name == 'native-release-dry' || inputs.dry_run) && 'build only' || 'publish' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build only, upload nothing.
+        type: boolean
+        default: false
+  push:
+    branches: [native-release, native-release-dry]
+
+concurrency:
+  group: native-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+    working-directory: super_native_extensions
+
+env:
+  FLUTTER_VERSION: 3.47.1
+  NDK_VERSION: 28.2.13676358
+  IOS_VERSION: 13
+  MACOS_VERSION: 12
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: macos-arm64, runner: macos-15, defines: "" }
+          - { target: macos-x64, runner: macos-15 }
+          - { target: ios-arm64-iphoneos, runner: macos-15 }
+          - { target: ios-arm64-iphonesimulator, runner: macos-15 }
+          - { target: ios-x64-iphonesimulator, runner: macos-15 }
+          - { target: android-arm, runner: ubuntu-22.04 }
+          - { target: android-arm64, runner: ubuntu-22.04 }
+          - { target: android-x64, runner: ubuntu-22.04 }
+          - { target: windows-x64, runner: windows-2022 }
+          - { target: windows-arm64, runner: windows-2022 }
+    steps:
+      - &checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Select Xcode
+        if: runner.os == 'macOS'
+        run: sudo xcode-select -s /Applications/Xcode_26.0.1.app/Contents/Developer
+      - name: Install the NDK
+        if: startsWith(matrix.target, 'android-')
+        run: |
+          { yes || true; } | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK_VERSION" > /dev/null
+          test -d "$ANDROID_HOME/ndk/$NDK_VERSION"
+      # The package depends on Flutter, so pub needs the Flutter SDK.
+      - &flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+      - name: Describe the toolchain
+        id: toolchain
+        run: |
+          case "${{ matrix.target }}" in
+            android-*) t="Android NDK $NDK_VERSION" ;;
+            macos-*|ios-*) t="$(xcodebuild -version | sed -n 1p), $(xcrun clang --version | sed -n 1p)" ;;
+            windows-*) t="$(cmd //c 'cl 2>&1' | sed -n 1p || echo MSVC)" ;;
+          esac
+          t="$t; Rust $(sed -n 's/^channel = "\(.*\)"/\1/p' rust/rust-toolchain.toml)"
+          echo "Toolchain: $t"
+          echo "value=$t" >> "$GITHUB_OUTPUT"
+      - &pub_get
+        run: flutter pub get
+      # Files go to $RUNNER_TEMP: untracked files in the checkout count in
+      # the source key.
+      - &paths
+        name: Set paths
+        run: echo "OUT=$RUNNER_TEMP/native" >> "$GITHUB_ENV"
+      - &clean
+        name: Check that the work tree is clean
+        run: |
+          if [[ -n "$(git status --porcelain -- .)" ]]; then
+            git status --porcelain -- .
+            echo "::error::Untracked or changed files would change the source key."
+            exit 1
+          fi
+      - &key
+        name: Source key
+        run: |
+          mkdir -p "$OUT/key"
+          dart run native_prebuilt:key --list > "$OUT/key/${{ matrix.target }}.txt"
+          tail -1 "$OUT/key/${{ matrix.target }}.txt"
+      - &build
+        name: Build
+        env:
+          TOOLCHAIN: ${{ steps.toolchain.outputs.value }}
+          RUNNER_LABEL: ${{ matrix.runner }}
+          DEFINES: ${{ matrix.defines }}
+        run: |
+          args=()
+          for d in $DEFINES; do args+=(--define "$d"); done
+          dart run native_prebuilt:build \
+            --target "${{ matrix.target }}" \
+            --out "$OUT/out/${{ matrix.target }}" \
+            --runner "$RUNNER_LABEL" \
+            --toolchain "$TOOLCHAIN" \
+            --ios-version "$IOS_VERSION" \
+            --macos-version "$MACOS_VERSION" \
+            "${args[@]}"
+          cat "$OUT/out/${{ matrix.target }}/target.json"
+      - *clean
+      - &upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-${{ matrix.target }}
+          path: ${{ runner.temp }}/native/
+          if-no-files-found: error
+          retention-days: 90
+
+  build-linux:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.host }}
+    timeout-minutes: 60
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            host: ubuntu-22.04
+            image: debian@sha256:cba95a21c96c1f5fc2470081829363eed57706634f7dc26e8c6712934303d57a
+            runner: ubuntu-22.04, Debian 11 bullseye-slim container
+          - target: linux-arm64
+            host: ubuntu-24.04-arm
+            image: debian@sha256:cba95a21c96c1f5fc2470081829363eed57706634f7dc26e8c6712934303d57a
+            runner: ubuntu-24.04-arm, Debian 11 bullseye-slim container
+          - target: linux-riscv64
+            host: ubuntu-22.04
+            image: ubuntu@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f17df77c7dbc
+            runner: ubuntu-22.04, Ubuntu 22.04 container, riscv64 sysroot
+            defines: sysroot=/opt/sne-sysroot
+    steps:
+      # The toolchain script is in the checkout; actions/checkout needs git
+      # in the container for a git work tree.
+      - name: Install git
+        working-directory: /
+        run: |
+          if grep -q '^VERSION_CODENAME=bullseye$' /etc/os-release; then
+            echo 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20260801T000000Z bullseye main' > /etc/apt/sources.list
+          fi
+          apt-get -o Acquire::Retries=8 update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=8 install -y -qq --no-install-recommends ca-certificates git > /dev/null
+      - *checkout
+      - name: Install the toolchain
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          tool/install_linux_build_toolchain.sh "${{ matrix.target }}"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - *flutter
+      - name: Describe the toolchain
+        id: toolchain
+        run: |
+          case "${{ matrix.target }}" in
+            linux-riscv64) c="$(riscv64-linux-gnu-gcc --version | sed -n 1p)" ;;
+            *) c="$(gcc --version | sed -n 1p)" ;;
+          esac
+          t="$(. /etc/os-release && echo "$PRETTY_NAME"), $c; Rust $(sed -n 's/^channel = "\(.*\)"/\1/p' rust/rust-toolchain.toml)"
+          echo "Toolchain: $t"
+          echo "value=$t" >> "$GITHUB_OUTPUT"
+      - *pub_get
+      - *paths
+      - *clean
+      - *key
+      - *build
+      - name: Load smoke test and glibc baseline
+        run: |
+          tool/smoke_linux_library.sh "${{ matrix.target }}" \
+            "$OUT/out/${{ matrix.target }}/libsuper_native_extensions_native.so"
+      - *clean
+      - *upload
+
+  release:
+    needs: [build, build-linux]
+    # Only the owner publishes, from this repository.
+    if: >-
+      github.repository == 'Telosnex/super_native_extensions' &&
+      github.actor == 'jpohhhh' && github.triggering_actor == 'jpohhhh'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      DRY_RUN: ${{ github.ref_name == 'native-release-dry' || inputs.dry_run == true }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - *flutter
+      - run: flutter pub get
+      - run: echo "ARTIFACTS=$RUNNER_TEMP/artifacts" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: native-*
+          path: ${{ runner.temp }}/artifacts
+          merge-multiple: true
+      - name: Compare the source keys of all runners (I2)
+        run: |
+          dart run native_prebuilt:key --list > "$RUNNER_TEMP/local-key.txt"
+          status=0
+          for f in "$ARTIFACTS"/key/*.txt; do
+            if ! diff -u "$RUNNER_TEMP/local-key.txt" "$f"; then
+              echo "::error::The source key on $(basename "$f" .txt) differs."
+              status=1
+            fi
+          done
+          exit $status
+      - name: Require the complete target matrix
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          expected = {
+              'macos-arm64', 'macos-x64', 'ios-arm64-iphoneos',
+              'ios-arm64-iphonesimulator', 'ios-x64-iphonesimulator',
+              'android-arm', 'android-arm64', 'android-x64',
+              'linux-arm64', 'linux-riscv64', 'linux-x64',
+              'windows-arm64', 'windows-x64',
+          }
+          root = Path(os.environ['ARTIFACTS']) / 'out'
+          assert {p.name for p in root.iterdir()} == expected
+          for target in expected:
+              assert (root / target / 'target.json').is_file(), target
+          PY
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          args=(--staging "$RUNNER_TEMP/staging")
+          if [[ "$DRY_RUN" == true ]]; then args+=(--dry-run); fi
+          dart run native_prebuilt:release "${args[@]}" "$ARTIFACTS/out"
+          cat native_artifacts/prebuilt.json
+      - name: Push the manifest branch
+        if: env.DRY_RUN != 'true'
+        run: |
+          tag="native-$(dart run native_prebuilt:key | tail -1 | cut -c1-16)"
+          branch="native-manifest/$tag"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add native_artifacts/prebuilt.json
+          git commit -m "native: prebuilt files of release $tag"
+          git push origin "$branch"
+          {
+            echo "Release: https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag"
+            echo
+            echo "Merge branch \`$branch\` to use it."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: prebuilt-manifest
+          path: super_native_extensions/native_artifacts/prebuilt.json
