@@ -165,7 +165,7 @@ Future<void> _run(
   final stopwatch = Stopwatch()..start();
   // bash runs the script, so the file mode of a checkout does not matter.
   final process = await Process.start(
-    'bash',
+    _bash(),
     bashArguments,
     workingDirectory: packageRoot.toFilePath(),
     environment: environment,
@@ -198,4 +198,25 @@ String _formatDuration(Duration duration) {
   final seconds = duration.inSeconds;
   if (seconds < 60) return '$seconds.${(millis % 1000) ~/ 100}s';
   return '${seconds ~/ 60}m ${seconds % 60}s';
+}
+
+/// bash for the build script. On Windows, Git's bash: the `bash` of
+/// System32 starts WSL.
+String _bash() {
+  if (!Platform.isWindows) return 'bash';
+  final env = Platform.environment;
+  for (final dir in (env['PATH'] ?? env['Path'] ?? '').split(';')) {
+    final lower = dir.toLowerCase();
+    if (lower.contains(r'\system32') || lower.contains(r'\windowsapps')) {
+      continue;
+    }
+    final bash = File('$dir\\bash.exe');
+    if (bash.existsSync()) return bash.path;
+  }
+  final git =
+      '${env['SYSTEMDRIVE'] ?? 'C:'}\\Program Files\\Git\\bin\\bash.exe';
+  if (File(git).existsSync()) return git;
+  throw StateError(
+    'super_native_extensions: a source build on Windows needs Git Bash.',
+  );
 }
