@@ -5,8 +5,12 @@
 /// the package sources match it (user define `native_build`: auto, download or
 /// source). Otherwise it runs tool/build_native_artifact.sh, which needs
 /// rustup and the target's C toolchain (see that script). User defines:
-/// `sysroot` for a cross build, and `rust_toolchain: host` builds with the cargo on PATH instead of rustup,
-/// for builds without network (Flatpak).
+/// `sysroot` for a cross build. `host_toolchain: true` (native_prebuilt's
+/// standard define, also from its defaults.json) or `rust_toolchain: host`
+/// builds with the cargo on PATH instead of rustup, for builds without
+/// network (Flatpak). The crates of rust/Cargo.lock must then be vendored
+/// in $HOME/.cargo; native_artifacts/sources.json lists the lock file for
+/// packagers (`dart run native_prebuilt:flatpak`).
 library;
 
 import 'dart:convert';
@@ -70,7 +74,7 @@ void main(List<String> args) async {
       input: input,
       output: output,
       log: _log,
-    ).run((_) => _buildFromSource(input, output, target));
+    ).run((source) => _buildFromSource(input, output, target, source));
     _log('Hook completed in ${_formatDuration(stopwatch.elapsed)}');
   });
 }
@@ -82,9 +86,11 @@ Future<void> _buildFromSource(
   BuildInput input,
   BuildOutputBuilder output,
   TargetName target,
+  SourceBuild source,
 ) async {
   final shared = input.outputDirectoryShared;
-  final hostToolchain = input.userDefines['rust_toolchain'] == 'host';
+  final hostToolchain =
+      source.hostToolchain || input.userDefines['rust_toolchain'] == 'host';
   final library = File.fromUri(
     input.outputDirectory.resolve(
       target.os.dylibFileName('super_native_extensions_native'),
@@ -165,7 +171,7 @@ Future<void> _run(
   final stopwatch = Stopwatch()..start();
   // bash runs the script, so the file mode of a checkout does not matter.
   final process = await Process.start(
-    _bash(),
+    bashExecutable(),
     bashArguments,
     workingDirectory: packageRoot.toFilePath(),
     environment: environment,
@@ -198,25 +204,4 @@ String _formatDuration(Duration duration) {
   final seconds = duration.inSeconds;
   if (seconds < 60) return '$seconds.${(millis % 1000) ~/ 100}s';
   return '${seconds ~/ 60}m ${seconds % 60}s';
-}
-
-/// bash for the build script. On Windows, Git's bash: the `bash` of
-/// System32 starts WSL.
-String _bash() {
-  if (!Platform.isWindows) return 'bash';
-  final env = Platform.environment;
-  for (final dir in (env['PATH'] ?? env['Path'] ?? '').split(';')) {
-    final lower = dir.toLowerCase();
-    if (lower.contains(r'\system32') || lower.contains(r'\windowsapps')) {
-      continue;
-    }
-    final bash = File('$dir\\bash.exe');
-    if (bash.existsSync()) return bash.path;
-  }
-  final git =
-      '${env['SYSTEMDRIVE'] ?? 'C:'}\\Program Files\\Git\\bin\\bash.exe';
-  if (File(git).existsSync()) return git;
-  throw StateError(
-    'super_native_extensions: a source build on Windows needs Git Bash.',
-  );
 }
