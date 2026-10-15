@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "sourceKey": "4bbf179f1ce3e2b51a35070751363e281d757b13e7ea5c8d3d8b5312f663b006",
-  "release": "https://github.com/Telosnex/super_native_extensions/releases/tag/native-4bbf179f1ce3e2b5",
+  "sourceKey": "4979853cba1ce444f0953ffe92d106a32f1a37e1f01b6ce50f512ced5a3aab17",
+  "release": "https://github.com/Telosnex/super_native_extensions/releases/tag/native-4979853cba1ce444",
   "targets": {
     "android-arm": {
       "runner": "ubuntu-22.04",
@@ -11,7 +11,7 @@
         {
           "name": "libsuper_native_extensions_native.so",
           "sha256": "6c2643540e3b9bccedee657a670e35b9ca64d50d371530d7003236036e34a97c",
-          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4bbf179f1ce3e2b5/android-arm-libsuper_native_extensions_native.so.gz",
+          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4979853cba1ce444/android-arm-libsuper_native_extensions_native.so.gz",
           "downloadSha256": "cfd8890033e56f1a9b01897f1621b7ac528cea3d81ad1f03cc18283ccdbf9984",
           "delivery": "bundle",
           "asset": "super_native_extensions_native"
@@ -26,7 +26,7 @@
         {
           "name": "libsuper_native_extensions_native.so",
           "sha256": "b299c2ff3f4e57479576d970763532605f4e925d0f47841d59a9054001f20b29",
-          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4bbf179f1ce3e2b5/android-arm64-libsuper_native_extensions_native.so.gz",
+          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4979853cba1ce444/android-arm64-libsuper_native_extensions_native.so.gz",
           "downloadSha256": "98e31f831a01464a209211435c1d764677c08d583ab3722398651d690bc95c56",
           "delivery": "bundle",
           "asset": "super_native_extensions_native"
@@ -41,7 +41,7 @@
         {
           "name": "libsuper_native_extensions_native.so",
           "sha256": "21a264fca46129a58a8e6a35d8319ffa7ef072100259186bb86a460e29122185",
-          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4bbf179f1ce3e2b5/android-x64-libsuper_native_extensions_native.so.gz",
+          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4979853cba1ce444/android-x64-libsuper_native_extensions_native.so.gz",
           "downloadSha256": "b26f9c9c42a429015ab557a92f49de7f3b58b04ec8f61b01e24042964a7f32b4",
           "delivery": "bundle",
           "asset": "super_native_extensions_native"
@@ -56,7 +56,7 @@
         {
           "name": "libsuper_native_extensions_native.dylib",
           "sha256": "af56d80e6b586c1c713ccffb0e3fa08e6bc165165987043f51eae147fa1dd26a",
-          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4bbf179f1ce3e2b5/ios-arm64-iphoneos-libsuper_native_extensions_native.dylib.gz",
+          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4979853cba1ce444/ios-arm64-iphoneos-libsuper_native_extensions_native.dylib.gz",
           "downloadSha256": "77163fcc16eda3053295e9898ce0a5c6d779b4d20bafb78d3dbef7f6870d46de",
           "delivery": "bundle",
           "asset": "super_native_extensions_native"
@@ -71,7 +71,7 @@
         {
           "name": "libsuper_native_extensions_native.dylib",
           "sha256": "3c6708e830b1e00d4119212be0e9fcf5f4ee7fb27ff9e02f9930d6ce04f9d38f",
-          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4bbf179f1ce3e2b5/ios-arm64-iphonesimulator-libsuper_native_extensions_native.dylib.gz",
+          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4979853cba1ce444/ios-arm64-iphonesimulator-libsuper_native_extensions_native.dylib.gz",
           "downloadSha256": "b65f1656c51ad25649a960e8d0bd22a3c970b45ccc001f661ed8c2c501e50028",
           "delivery": "bundle",
           "asset": "super_native_extensions_native"
@@ -86,7 +86,7 @@
         {
           "name": "libsuper_native_extensions_native.dylib",
           "sha256": "e6f57a80b165c7c742a2f6ba7ea72baeacae82338a14817d24a289f2103e8ca8",
-          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4bbf179f1ce3e2b5/ios-x64-iphonesimulator-libsuper_native_extensions_native.dylib.gz",
+          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4979853cba1ce444/ios-x64-iphonesimulator-libsuper_native_extensions_native.dylib.gz",
           "downloadSha256": "a21f67ba8e2672325d79286105081d6bde711579d8144fb19d9c5ed4e388ab64",
           "delivery": "bundle",
           "asset": "super_native_extensions_native"
@@ -100,7 +100,7 @@
         {
           "name": "libsuper_native_extensions_native.so",
           "sha256": "0f10b65a7db79d3682eb7d80b3c7a42565f491ff7dbe71d4ab5cda7973d3d0cb",
-          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4bbf179f1ce3e2b5/linux-arm64-libsuper_native_extensions_native.so.gz",
+          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4979853cba1ce444/linux-arm64-libsuper_native_extensions_native.so.gz",
           "downloadSha256": "16e9f4166c7c2c5fe3457180402adba0bfd7abf07d92cb419aa4edc893362222",
           "delivery": "bundle",
           "asset": "super_native_extensions_native"
@@ -114,7 +114,7 @@
         {
           "name": "libsuper_native_extensions_native.so",
           "sha256": "cbcd40b245c6eb32c32deb15b619a8194b356a1f75f9bbb6f1000313464613c4",
-          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4bbf179f1ce3e2b5/linux-riscv64-libsuper_native_extensions_native.so.gz",
+          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4979853cba1ce444/linux-riscv64-libsuper_native_extensions_native.so.gz",
           "downloadSha256": "2eb93d57b4f7a7d54587964844237280419d61e5a24319038c270e559540c8e3",
           "delivery": "bundle",
           "asset": "super_native_extensions_native"
@@ -128,7 +128,7 @@
         {
           "name": "libsuper_native_extensions_native.so",
           "sha256": "84b5a4fef0518acbd863e5d4b56dda796dca73617b017dc59cc629c90a542685",
-          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4bbf179f1ce3e2b5/linux-x64-libsuper_native_extensions_native.so.gz",
+          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4979853cba1ce444/linux-x64-libsuper_native_extensions_native.so.gz",
           "downloadSha256": "4c2e43186ca09ed364f1096f141987d68f8a7504515812392ab94b7678fe973e",
           "delivery": "bundle",
           "asset": "super_native_extensions_native"
@@ -143,7 +143,7 @@
         {
           "name": "libsuper_native_extensions_native.dylib",
           "sha256": "cd3cf7991ab8605714202ff654c300f10be330e11950a2e173b194e45d0276d1",
-          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4bbf179f1ce3e2b5/macos-arm64-libsuper_native_extensions_native.dylib.gz",
+          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4979853cba1ce444/macos-arm64-libsuper_native_extensions_native.dylib.gz",
           "downloadSha256": "27512b278ea9838b6ea97460fdd4b22022abc53b2a092ac49c8be944a1731361",
           "delivery": "bundle",
           "asset": "super_native_extensions_native"
@@ -158,7 +158,7 @@
         {
           "name": "libsuper_native_extensions_native.dylib",
           "sha256": "fcfaf714ad72f9558e323d9caec3cb939a98ddf9fe027845bc5e32b99092a3f7",
-          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4bbf179f1ce3e2b5/macos-x64-libsuper_native_extensions_native.dylib.gz",
+          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4979853cba1ce444/macos-x64-libsuper_native_extensions_native.dylib.gz",
           "downloadSha256": "be78c1b0c981796f3a1a09336d52877df5c6147122ee905def90b3251953b723",
           "delivery": "bundle",
           "asset": "super_native_extensions_native"
@@ -171,9 +171,9 @@
       "files": [
         {
           "name": "super_native_extensions_native.dll",
-          "sha256": "a832de1065ae13f0e9dd72e82a8f9d91dc7d24b7be04ca4c737b79de4ab76518",
-          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4bbf179f1ce3e2b5/windows-arm64-super_native_extensions_native.dll.gz",
-          "downloadSha256": "447c1904f3a8923483e798a9dd58d8b5bb4bb40164be7733789f86b2e7442cdd",
+          "sha256": "a3b0dd43cb3ac66df506ac85b67d5d4abdbd67d252e569f607ed5c178ec2c98d",
+          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4979853cba1ce444/windows-arm64-super_native_extensions_native.dll.gz",
+          "downloadSha256": "5185d21d8792546c50bfeacb4af955854c05798c27fc86f51c225b5e69e9d627",
           "delivery": "bundle",
           "asset": "super_native_extensions_native"
         }
@@ -185,9 +185,9 @@
       "files": [
         {
           "name": "super_native_extensions_native.dll",
-          "sha256": "af84afe0258ea65f5ab08d7de9f1f58c584b84afb77f4ba5ba650e07fdf3d5d8",
-          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4bbf179f1ce3e2b5/windows-x64-super_native_extensions_native.dll.gz",
-          "downloadSha256": "57f52121a84abab26e91713b163055327b5c7f4e94a55407ccf45a35cf9d8a3f",
+          "sha256": "f058ef401b5d556ef5166ab15013efd4423afe502e6dffb03165ff26bcff4ddf",
+          "url": "https://github.com/Telosnex/super_native_extensions/releases/download/native-4979853cba1ce444/windows-x64-super_native_extensions_native.dll.gz",
+          "downloadSha256": "383028180feee1438fe2b88fb3a16b7005edbace3252f46c9f2e78755472c030",
           "delivery": "bundle",
           "asset": "super_native_extensions_native"
         }
