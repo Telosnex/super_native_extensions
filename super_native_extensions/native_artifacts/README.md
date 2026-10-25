@@ -1,7 +1,7 @@
 # Native releases
 
 Same flow as Telosnex's `zxing_dart`, `image_ffmpeg` and `fllama`
-(package:native_prebuilt, ADR 001). `prebuilt.json` pins SHA-256-verified
+(package:kiln, ADR 001). `prebuilt.json` pins SHA-256-verified
 libraries from an immutable GitHub release, keyed by the build inputs (the
 source key: `rust/`, `hook/build.dart`, `pubspec.yaml`,
 `tool/build_native_artifact.sh`; see `source_excludes.txt`). No binary is in
@@ -10,7 +10,7 @@ Git.
 The hook downloads the library of the release when the sources match it.
 Otherwise, or with user define `native_build: source`, it runs
 `tool/build_native_artifact.sh` (Cargo). The release workflow runs the same
-source build on every target: `dart run native_prebuilt:build`.
+source build on every target: `dart run kiln:build`.
 
 The asset ID remains
 `package:super_native_extensions/super_native_extensions_native`.
@@ -19,7 +19,7 @@ The asset ID remains
 
 | Define | Effect |
 |---|---|
-| `native_build` | `auto` (default), `download`, or `source` (native_prebuilt) |
+| `native_build` | `auto` (default), `download`, or `source` (kiln) |
 | `rust_toolchain: host` | Source build with the cargo on PATH, not rustup. For builds without network (Flatpak): `$HOME/.cargo/config.toml` must vendor the crates of `rust/Cargo.lock`. |
 | `sysroot` | Target sysroot of a cross build (the linux-riscv64 release) |
 | `skip_linux_arm64_native_build` | flutter-pi: with its compiler wrapper, no library for Linux ARM64 |
@@ -48,11 +48,11 @@ The asset ID remains
 ## Release
 
 ```sh
-git push -f origin HEAD:native-release-dry   # build every target, no upload
-git push -f origin HEAD:native-release       # publish (owner only)
+git push -f origin HEAD:kiln-release-dry  # build every target, no upload
+git push -f origin HEAD:kiln-release      # publish (owner only)
 ```
 
-The release job pushes `native-manifest/<tag>` with `prebuilt.json`. Merge it.
+The release job pushes `kiln-manifest/<tag>` with `prebuilt.json`. Merge it.
 
 ## Local builds
 

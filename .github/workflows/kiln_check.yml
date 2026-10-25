@@ -1,0 +1,21 @@
+name: Kiln check
+
+on:
+  pull_request:
+    branches: [main, native-prebuilt]
+    paths:
+      - super_native_extensions/native_artifacts/prebuilt.json
+      - super_native_extensions/native_artifacts/source_excludes.txt
+      - .github/workflows/kiln_check.yml
+  schedule:
+    - cron: '27 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kiln-check:
+    uses: Telosnex/telosnex_ci_tools/.github/workflows/kiln_check.yml@6f13e2b72cdcc8e5d1b53d5b7dfd50d316156928 # v0.3.1
+    with:
+      working-directory: super_native_extensions

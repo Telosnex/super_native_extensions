@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Builds the native library for one target with Cargo.
 #
-# hook/build.dart runs it for source builds (native_prebuilt ADR 001), and so
-# does the release workflow, through `dart run native_prebuilt:build`.
+# hook/build.dart runs it for source builds (kiln ADR 001), and so
+# does the release workflow, through `dart run kiln:build`.
 # Environment:
 #   SNE_OUTPUT              Write the library here. Default:
 #                           build/native/out/<target>/.

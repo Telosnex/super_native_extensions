@@ -1,16 +1,16 @@
 /// Bundles the super_native_extensions Rust library as a Dart code asset.
 ///
-/// With package:native_prebuilt (native_prebuilt ADR 001), the hook downloads
+/// With package:kiln (kiln ADR 001), the hook downloads
 /// the library from the GitHub release in native_artifacts/prebuilt.json when
 /// the package sources match it (user define `native_build`: auto, download or
 /// source). Otherwise it runs tool/build_native_artifact.sh, which needs
 /// rustup and the target's C toolchain (see that script). User defines:
-/// `sysroot` for a cross build. `host_toolchain: true` (native_prebuilt's
+/// `sysroot` for a cross build. `host_toolchain: true` (kiln's
 /// standard define, also from its defaults.json) or `rust_toolchain: host`
 /// builds with the cargo on PATH instead of rustup, for builds without
 /// network (Flatpak). The crates of rust/Cargo.lock must then be vendored
 /// in $HOME/.cargo; native_artifacts/sources.json lists the lock file for
-/// packagers (`dart run native_prebuilt:flatpak`).
+/// packagers (`dart run kiln:flatpak`).
 library;
 
 import 'dart:convert';
@@ -19,7 +19,7 @@ import 'dart:io';
 import 'package:code_assets/code_assets.dart';
 import 'package:crypto/crypto.dart';
 import 'package:hooks/hooks.dart';
-import 'package:native_prebuilt/native_prebuilt.dart';
+import 'package:kiln/kiln.dart';
 
 const _assetName = 'super_native_extensions_native';
 
@@ -70,7 +70,7 @@ void main(List<String> args) async {
         'Supported targets: ${_targets.join(', ')}.',
       );
     }
-    await NativePrebuilt(
+    await Kiln(
       input: input,
       output: output,
       log: _log,
