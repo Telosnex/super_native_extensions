@@ -2,7 +2,7 @@
 # Local Linux build in the release containers, then the load smoke test.
 #   tool/build_native_linux_docker.sh <linux-x64|linux-arm64|linux-riscv64>
 # Output: build/native/out/<target>/. The release builds the same way, with
-# `dart run native_prebuilt:build` (.github/workflows/native_release.yml).
+# `dart run kiln:build` (.github/workflows/kiln_release.yml).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 target="${1:-}"

@@ -1,0 +1,62 @@
+# Builds the super_native_extensions library for every target and publishes
+# it as a GitHub release. Telosnex/telosnex_ci_tools has the jobs; the
+# package is in super_native_extensions/ (working-directory), and
+# super_native_extensions/tool/kiln/ has its steps:
+#
+#   prepare.dart     Selects Xcode 26.0.1 on macOS and iOS; installs the
+#                    Linux toolchain in its container
+#                    (tool/install_linux_build_toolchain.sh).
+#   test_build.dart  Loads the Linux library on its target ABI and checks
+#                    the glibc baseline (tool/smoke_linux_library.sh).
+#
+# linux-x64 and linux-arm64 build natively in Debian 11 bullseye (glibc
+# 2.31), linux-riscv64 cross in Ubuntu 22.04 with a target sysroot.
+# windows-arm64 cross-compiles on windows-2022.
+#
+# Start it with
+#   git push -f origin HEAD:kiln-release       (release)
+#   git push -f origin HEAD:kiln-release-dry   (build only, no upload)
+# or with workflow_dispatch. On success it pushes the branch
+# kiln-manifest/<tag>. Merge that branch to use the release.
+name: Kiln release
+run-name: Kiln release / ${{ (github.ref_name == 'kiln-release-dry' || inputs.dry_run) && 'build only' || 'publish' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build only, upload nothing.
+        type: boolean
+        default: false
+  push:
+    branches: [kiln-release, kiln-release-dry]
+
+permissions:
+  contents: read
+
+jobs:
+  kiln-release:
+    uses: Telosnex/telosnex_ci_tools/.github/workflows/kiln_release.yml@1f08ee0dd5fc52eb7642116fc74236c249cbabfa # v0.3.0
+    permissions:
+      contents: write
+    with:
+      dry-run: ${{ inputs.dry_run == true }}
+      working-directory: super_native_extensions
+      # The 10 default targets, and the Intel macOS, the Intel iOS simulator
+      # and linux-riscv64.
+      targets: >-
+        ["windows-x64", "windows-arm64", "linux-x64", "linux-arm64",
+        "linux-riscv64", "macos-arm64", "macos-x64", "ios-arm64-iphoneos",
+        "ios-arm64-iphonesimulator", "ios-x64-iphonesimulator",
+        "android-arm", "android-arm64", "android-x64"]
+      runners: >-
+        {"windows-arm64": {"runner": "windows-2022"},
+        "linux-x64": {"runner": "ubuntu-22.04", "image": "debian@sha256:cba95a21c96c1f5fc2470081829363eed57706634f7dc26e8c6712934303d57a"},
+        "linux-arm64": {"runner": "ubuntu-24.04-arm", "image": "debian@sha256:cba95a21c96c1f5fc2470081829363eed57706634f7dc26e8c6712934303d57a"},
+        "linux-riscv64": {"runner": "ubuntu-22.04", "image": "ubuntu@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f17df77c7dbc"}}
+      build-args: >-
+        {"*": ["--ios-version", "13", "--macos-version", "12"],
+        "linux-x64": ["--runner", "ubuntu-22.04, Debian 11 bullseye-slim container"],
+        "linux-arm64": ["--runner", "ubuntu-24.04-arm, Debian 11 bullseye-slim container"],
+        "linux-riscv64": ["--runner", "ubuntu-22.04, Ubuntu 22.04 container, riscv64 sysroot",
+          "--define", "sysroot=/opt/sne-sysroot"]}
