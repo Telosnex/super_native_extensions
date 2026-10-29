@@ -61,11 +61,17 @@ jobs:
             echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           fi
       - name: Install Melos
+        # setup-flutter does not put the pub cache on PATH.
         run: |
           flutter pub global activate melos
-          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            cygpath -w "$LOCALAPPDATA/Pub/Cache/bin" >> "$GITHUB_PATH"
+          else
+            echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+          fi
       - run: melos bootstrap
       - name: Clipboard
+        id: clipboard
         uses: Telosnex/telosnex_ci_tools/actions/watch@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
         with:
           working-directory: ${{ env.CLIPBOARD }}
@@ -76,7 +82,8 @@ jobs:
             if [[ "$RUNNER_OS" == Linux ]]; then run=(xvfb-run -a "${run[@]}"); fi
             "${run[@]}"
       - name: Drag and drop, hot keys
-        if: success() || failure()
+        # Also after failed clipboard tests, not after a failed setup.
+        if: success() || steps.clipboard.outcome == 'failure'
         uses: Telosnex/telosnex_ci_tools/actions/watch@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
         with:
           working-directory: ${{ env.DRAG }}
@@ -135,11 +142,17 @@ jobs:
           persist-credentials: false
       - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
       - name: Install Melos
+        # setup-flutter does not put the pub cache on PATH.
         run: |
           flutter pub global activate melos
-          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            cygpath -w "$LOCALAPPDATA/Pub/Cache/bin" >> "$GITHUB_PATH"
+          else
+            echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+          fi
       - run: melos bootstrap
       - name: Clipboard
+        id: clipboard
         uses: Telosnex/telosnex_ci_tools/actions/web-driver@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
         with:
           browser: chrome
@@ -155,7 +168,8 @@ jobs:
               --driver test_driver/integration_test.dart \
               --target integration_test/clipboard_test.dart "${args[@]}"
       - name: Drag and drop, hot keys
-        if: success() || failure()
+        # Also after failed clipboard tests, not after a failed setup.
+        if: success() || steps.clipboard.outcome == 'failure'
         uses: Telosnex/telosnex_ci_tools/actions/web-driver@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
         with:
           browser: chrome
@@ -189,16 +203,22 @@ jobs:
           persist-credentials: false
       - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
       - name: Install Melos
+        # setup-flutter does not put the pub cache on PATH.
         run: |
           flutter pub global activate melos
-          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            cygpath -w "$LOCALAPPDATA/Pub/Cache/bin" >> "$GITHUB_PATH"
+          else
+            echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+          fi
       - run: melos bootstrap
       # A source build of the library (see the top of this file) needs the
       # NDK of the release builds.
       - name: Android NDK 28.2.13676358
         run: |
           if [[ ! -f "$ANDROID_HOME/ndk/28.2.13676358/source.properties" ]]; then
-            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install 'ndk;28.2.13676358' > /dev/null
+            # yes ends with SIGPIPE when sdkmanager is done (pipefail).
+            (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install 'ndk;28.2.13676358' > /dev/null
           fi
       # Built before the emulator boots: Gradle and the emulator share the
       # CPUs. The builds in the test steps are then incremental.
@@ -210,13 +230,15 @@ jobs:
       - id: emulator
         uses: Telosnex/telosnex_ci_tools/actions/android-emulator@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
       - name: Clipboard
+        id: clipboard
         uses: Telosnex/telosnex_ci_tools/actions/watch@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
         with:
           working-directory: ${{ env.CLIPBOARD }}
           idle-minutes: '15'
           run: flutter test integration_test/clipboard_test.dart -d "${{ steps.emulator.outputs.serial }}" -r expanded
       - name: Drag and drop, hot keys
-        if: success() || failure()
+        # Also after failed clipboard tests, not after a failed setup.
+        if: success() || steps.clipboard.outcome == 'failure'
         uses: Telosnex/telosnex_ci_tools/actions/watch@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
         with:
           working-directory: ${{ env.DRAG }}
@@ -244,15 +266,21 @@ jobs:
           persist-credentials: false
       - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
       - name: Install Melos
+        # setup-flutter does not put the pub cache on PATH.
         run: |
           flutter pub global activate melos
-          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            cygpath -w "$LOCALAPPDATA/Pub/Cache/bin" >> "$GITHUB_PATH"
+          else
+            echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+          fi
       - run: melos bootstrap
       - uses: Telosnex/telosnex_ci_tools/actions/ios-simulator-boot@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
         id: simulator
       # No build ahead: Xcode rebuilds for flutter test's destination anyway.
       # One target per app: all_tests.dart has every test of the drag app.
       - name: Clipboard
+        id: clipboard
         uses: Telosnex/telosnex_ci_tools/actions/ios-flutter-test@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
         with:
           working-directory: ${{ env.CLIPBOARD }}
@@ -260,12 +288,17 @@ jobs:
           udid: ${{ steps.simulator.outputs.udid }}
           artifact-name: ios-clipboard-logs
           idle-minutes: '15'
+      # ios-flutter-test shuts its simulator down at the end: a new one.
+      - uses: Telosnex/telosnex_ci_tools/actions/ios-simulator-boot@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+        id: simulator2
+        if: success() || steps.clipboard.outcome == 'failure'
       - name: Drag and drop, hot keys
-        if: success() || failure()
+        # Also after failed clipboard tests, not after a failed setup.
+        if: success() || steps.clipboard.outcome == 'failure'
         uses: Telosnex/telosnex_ci_tools/actions/ios-flutter-test@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
         with:
           working-directory: ${{ env.DRAG }}
           target: integration_test/all_tests.dart
-          udid: ${{ steps.simulator.outputs.udid }}
+          udid: ${{ steps.simulator2.outputs.udid }}
           artifact-name: ios-drag-logs
           idle-minutes: '15'
