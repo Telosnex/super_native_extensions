@@ -67,8 +67,8 @@ jobs:
       # The workspace's melos (root pubspec.lock), through dart run: a
       # global melos 7+ wants a pub workspace, and on Windows a global melos
       # is melos.bat, which bash does not run as melos.
+      # In the real path: melos does not find itself under a subst drive.
       - name: Melos bootstrap
-        working-directory: ${{ env.ROOT }}
         run: |
           flutter pub get
           dart run melos bootstrap
