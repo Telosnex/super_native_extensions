@@ -1,4 +1,4 @@
-library super_hot_key;
+library;
 
 import 'package:flutter/services.dart';
 import 'package:super_keyboard_layout/super_keyboard_layout.dart';
@@ -107,7 +107,7 @@ class _HotKeyManager extends raw.HotKeyManagerDelegate {
   }
 
   Future<void> destroyHotKey(HotKey hotKey) async {
-    _hotKeys.remove(hotKey);
+    _hotKeys.remove(hotKey._handle);
     await raw.HotKeyManager.instance.destroyHotKey(hotKey._handle);
   }
 
