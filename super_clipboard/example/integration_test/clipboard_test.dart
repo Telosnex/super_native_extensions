@@ -229,8 +229,8 @@ void clipboardTests() {
       expect(await reader.items[1].readValue(Formats.fileUri), b);
     }, skip: kIsWeb ? _webFileUris : null);
 
-    // README: Windows and Linux keep only file URIs and URIs past the first
-    // item.
+    // The Windows and Linux clipboards have one set of formats, not items:
+    // the items are merged, and the reader sees one item per file (README).
     test('two items: text and image, then a file URI', () async {
       final file = await createTempFile('second item.txt', 'second');
       await _write([
@@ -238,21 +238,17 @@ void clipboardTests() {
         _item([Formats.fileUri(file)]),
       ]);
       final reader = await _clipboard.read();
-      expect(reader.items, hasLength(2),
+      final merged = !kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.windows ||
+              defaultTargetPlatform == TargetPlatform.linux);
+      expect(reader.items, hasLength(merged ? 1 : 2),
           reason: 'formats on the clipboard: ${reader.platformFormats}');
-      final first = reader.items[0];
-      final second = reader.items[1];
+      final first = reader.items.first;
+      final second = reader.items.last;
       expect(await first.readValue(Formats.plainText), _text);
       expect(await _readFile(first, Formats.png), orderedEquals(_png));
       expect(await second.readValue(Formats.fileUri), file);
-    },
-        skip: kIsWeb
-            ? 'the web clipboard writes one item only'
-            : defaultTargetPlatform == TargetPlatform.linux ||
-                    defaultTargetPlatform == TargetPlatform.windows
-                ? "known bug: Linux and Windows list only the first item's "
-                    'formats'
-                : null);
+    }, skip: kIsWeb ? 'the web clipboard writes one item only' : null);
 
     test('two items: text in each', () async {
       await _write([
