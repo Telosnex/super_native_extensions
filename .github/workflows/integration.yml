@@ -1,0 +1,303 @@
+# The integration tests of the example apps on every platform:
+#   super_clipboard/example: integration_test/clipboard_test.dart, clipboard
+#     round trips through the system clipboard.
+#   super_drag_and_drop/example: integration_test/all_tests.dart, drag and
+#     drop (drag_and_drop_test.dart) and global hot keys (hot_key_test.dart).
+# On main and ci/**, nightly and by hand; pull requests run unit.yml.
+#
+# The build hook of super_native_extensions downloads the library of
+# native_artifacts/prebuilt.json when the sources match it, and builds it
+# with Rust otherwise (Unit warns then). The jobs can do both.
+name: Integration
+
+on:
+  push:
+    branches: [main, 'ci/**']
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+# bash with pipefail: a pipe into tee must not hide a failed test.
+defaults:
+  run:
+    shell: bash
+
+env:
+  CLIPBOARD: super_clipboard/example
+  DRAG: super_drag_and_drop/example
+
+jobs:
+  # Desktop: the jobs share the steps of the first (YAML anchor). Linux runs
+  # under Xvfb (X11), with xdotool for the system mouse of the drag tests.
+  desktop-linux-x64:
+    name: Linux x64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      DEVICE: linux
+      ROOT: ${{ github.workspace }}
+    steps: &desktop_steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Short path
+        if: runner.os == 'Windows'
+        run: subst "$ROOT" "$(cygpath -w "$GITHUB_WORKSPACE")"
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+      - name: Linux build dependencies, Xvfb and xdotool
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang cmake ninja-build pkg-config \
+            libgtk-3-dev xvfb xdotool > /dev/null
+      # For a source build of the library (see the top of this file).
+      - name: Rust
+        run: |
+          if ! command -v rustup > /dev/null; then
+            curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+      # The workspace's melos (root pubspec.lock), through dart run: a
+      # global melos 7+ wants a pub workspace, and on Windows a global melos
+      # is melos.bat, which bash does not run as melos.
+      # In the real path: melos does not find itself under a subst drive.
+      - name: Melos bootstrap
+        run: |
+          flutter pub get
+          dart run melos bootstrap
+      - name: Clipboard
+        id: clipboard
+        uses: Telosnex/telosnex_ci_tools/actions/watch@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+        with:
+          working-directory: ${{ env.ROOT }}/${{ env.CLIPBOARD }}
+          # The first build (and a Rust source build) prints nothing for minutes.
+          idle-minutes: '15'
+          run: |
+            run=(flutter test integration_test/clipboard_test.dart -d "$DEVICE" -r expanded)
+            if [[ "$RUNNER_OS" == Linux ]]; then run=(xvfb-run -a "${run[@]}"); fi
+            "${run[@]}"
+      - name: Drag and drop, hot keys
+        # Also after failed clipboard tests, not after a failed setup.
+        if: success() || steps.clipboard.outcome == 'failure'
+        uses: Telosnex/telosnex_ci_tools/actions/watch@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+        with:
+          working-directory: ${{ env.ROOT }}/${{ env.DRAG }}
+          idle-minutes: '15'
+          run: |
+            run=(flutter test integration_test/all_tests.dart -d "$DEVICE" -r expanded)
+            if [[ "$RUNNER_OS" == Linux ]]; then run=(xvfb-run -a "${run[@]}"); fi
+            "${run[@]}"
+      - name: Crash reports
+        if: failure() && runner.os == 'macOS'
+        run: |
+          mkdir -p "$RUNNER_TEMP/crashes"
+          cp ~/Library/Logs/DiagnosticReports/*.ips "$RUNNER_TEMP/crashes/" 2> /dev/null || true
+      - if: failure() && runner.os == 'macOS'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: macos-crash-logs
+          path: ${{ runner.temp }}/crashes/
+          if-no-files-found: ignore
+
+  desktop-linux-arm64:
+    name: Linux ARM64
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    env:
+      DEVICE: linux
+      ROOT: ${{ github.workspace }}
+    steps: *desktop_steps
+
+  desktop-macos-arm64:
+    name: macOS ARM64
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      DEVICE: macos
+      ROOT: ${{ github.workspace }}
+    steps: *desktop_steps
+
+  desktop-windows-x64:
+    name: Windows x64
+    runs-on: windows-2025
+    timeout-minutes: 45
+    env:
+      DEVICE: windows
+      # A short root (subst): a Rust source build's paths under
+      # D:\a\super_native_extensions\super_native_extensions\...\.dart_tool
+      # pass MAX_PATH, and link.exe fails (LNK1104).
+      ROOT: 'S:'
+    steps: *desktop_steps
+
+  # Chrome, through flutter drive and the web driver. One app after the
+  # other: each use of web-driver has its own driver port and artifact.
+  web-linux-chrome-dart2js:
+    name: Web Linux x64 Chrome dart2js
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      COMPILER: dart2js
+    steps: &web_steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+      # The workspace's melos (root pubspec.lock), through dart run: a
+      # global melos 7+ wants a pub workspace, and on Windows a global melos
+      # is melos.bat, which bash does not run as melos.
+      - name: Melos bootstrap
+        run: |
+          flutter pub get
+          dart run melos bootstrap
+      - name: Clipboard
+        id: clipboard
+        uses: Telosnex/telosnex_ci_tools/actions/web-driver@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+        with:
+          browser: chrome
+          port: '4444'
+          working-directory: ${{ env.CLIPBOARD }}
+          artifact-name: web-chrome-${{ env.COMPILER }}-clipboard-logs
+          # Never pass without results: Chrome writes text and PNG only.
+          require-result: '.telosnexWebTestSummary.passed >= 5'
+          run: |
+            args=()
+            if [[ "$COMPILER" == dart2wasm ]]; then args+=(--wasm); fi
+            flutter drive --release -d web-server --browser-name chrome --driver-port 4444 \
+              --driver test_driver/integration_test.dart \
+              --target integration_test/clipboard_test.dart "${args[@]}"
+      - name: Drag and drop, hot keys
+        # Also after failed clipboard tests, not after a failed setup.
+        if: success() || steps.clipboard.outcome == 'failure'
+        uses: Telosnex/telosnex_ci_tools/actions/web-driver@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+        with:
+          browser: chrome
+          port: '4445'
+          working-directory: ${{ env.DRAG }}
+          artifact-name: web-chrome-${{ env.COMPILER }}-drag-logs
+          require-result: '.telosnexWebTestSummary.passed >= 4'
+          run: |
+            args=()
+            if [[ "$COMPILER" == dart2wasm ]]; then args+=(--wasm); fi
+            flutter drive --release -d web-server --browser-name chrome --driver-port 4445 \
+              --driver test_driver/integration_test.dart \
+              --target integration_test/all_tests.dart "${args[@]}"
+
+  web-linux-chrome-dart2wasm:
+    name: Web Linux x64 Chrome dart2wasm
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      COMPILER: dart2wasm
+    steps: *web_steps
+
+  android:
+    # ubuntu-24.04-arm has no /dev/kvm.
+    name: Android x64 emulator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+      # The workspace's melos (root pubspec.lock), through dart run: a
+      # global melos 7+ wants a pub workspace, and on Windows a global melos
+      # is melos.bat, which bash does not run as melos.
+      - name: Melos bootstrap
+        run: |
+          flutter pub get
+          dart run melos bootstrap
+      # A source build of the library (see the top of this file) needs the
+      # NDK of the release builds.
+      - name: Android NDK 28.2.13676358
+        run: |
+          if [[ ! -f "$ANDROID_HOME/ndk/28.2.13676358/source.properties" ]]; then
+            # yes ends with SIGPIPE when sdkmanager is done (pipefail).
+            (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install 'ndk;28.2.13676358' > /dev/null
+          fi
+      # Built before the emulator boots: Gradle and the emulator share the
+      # CPUs. The builds in the test steps are then incremental.
+      - name: Build the test apps
+        timeout-minutes: 30
+        run: |
+          (cd "$CLIPBOARD" && flutter build apk --debug --target-platform android-x64 -t integration_test/clipboard_test.dart)
+          (cd "$DRAG" && flutter build apk --debug --target-platform android-x64 -t integration_test/all_tests.dart)
+      - id: emulator
+        uses: Telosnex/telosnex_ci_tools/actions/android-emulator@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+      - name: Clipboard
+        id: clipboard
+        uses: Telosnex/telosnex_ci_tools/actions/watch@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+        with:
+          working-directory: ${{ env.CLIPBOARD }}
+          idle-minutes: '15'
+          run: flutter test integration_test/clipboard_test.dart -d "${{ steps.emulator.outputs.serial }}" -r expanded
+      - name: Drag and drop, hot keys
+        # Also after failed clipboard tests, not after a failed setup.
+        if: success() || steps.clipboard.outcome == 'failure'
+        uses: Telosnex/telosnex_ci_tools/actions/watch@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+        with:
+          working-directory: ${{ env.DRAG }}
+          idle-minutes: '15'
+          run: flutter test integration_test/all_tests.dart -d "${{ steps.emulator.outputs.serial }}" -r expanded
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure() || cancelled()
+        with:
+          name: android-emulator-logs
+          path: |
+            ${{ steps.emulator.outputs.log }}
+            ${{ steps.emulator.outputs.logcat }}
+          if-no-files-found: ignore
+
+  ios:
+    name: iOS ARM64 simulator
+    # macos-26 (Xcode 26.6): device_info_plus needs a newer iOS SDK than
+    # Xcode 26.0 has, and fllama saw flutter test miss the VM service on
+    # macos-15.
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+      # The workspace's melos (root pubspec.lock), through dart run: a
+      # global melos 7+ wants a pub workspace, and on Windows a global melos
+      # is melos.bat, which bash does not run as melos.
+      - name: Melos bootstrap
+        run: |
+          flutter pub get
+          dart run melos bootstrap
+      - uses: Telosnex/telosnex_ci_tools/actions/ios-simulator-boot@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+        id: simulator
+      # No build ahead: Xcode rebuilds for flutter test's destination anyway.
+      # One target per app: all_tests.dart has every test of the drag app.
+      - name: Clipboard
+        id: clipboard
+        uses: Telosnex/telosnex_ci_tools/actions/ios-flutter-test@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+        with:
+          working-directory: ${{ env.CLIPBOARD }}
+          target: integration_test/clipboard_test.dart
+          udid: ${{ steps.simulator.outputs.udid }}
+          artifact-name: ios-clipboard-logs
+          idle-minutes: '15'
+      # ios-flutter-test shuts its simulator down at the end: a new one.
+      - uses: Telosnex/telosnex_ci_tools/actions/ios-simulator-boot@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+        id: simulator2
+        if: success() || steps.clipboard.outcome == 'failure'
+      - name: Drag and drop, hot keys
+        # Also after failed clipboard tests, not after a failed setup.
+        if: success() || steps.clipboard.outcome == 'failure'
+        uses: Telosnex/telosnex_ci_tools/actions/ios-flutter-test@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
+        with:
+          working-directory: ${{ env.DRAG }}
+          target: integration_test/all_tests.dart
+          udid: ${{ steps.simulator2.outputs.udid }}
+          artifact-name: ios-drag-logs
+          idle-minutes: '15'

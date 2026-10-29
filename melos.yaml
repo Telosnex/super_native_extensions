@@ -11,3 +11,9 @@ packages:
   - super_keyboard_layout
   - super_keyboard_layout/example
   - super_native_extensions
+
+command:
+  bootstrap:
+    # Two examples have the same git dependency (telosnex_web_test): pub
+    # gets in parallel race on its checkout in the pub cache.
+    runPubGetInParallel: false
