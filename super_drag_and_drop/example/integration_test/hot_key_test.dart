@@ -86,21 +86,19 @@ void hotKeyTests() {
       expect(first, isNotNull);
       try {
         HotKey? second;
+        Object? error;
         try {
           second = await HotKey.create(definition: _pressDefinition);
-        } on PlatformException {
-          second = null;
+        } on PlatformException catch (e) {
+          error = e;
         }
         await second?.dispose();
+        // As on Windows: create throws, and gives no hot key.
         expect(second, isNull);
+        expect(error, isA<PlatformException>());
       } finally {
         await first!.dispose();
       }
-    },
-        skip: !_supported
-            ? _unsupported
-            : defaultTargetPlatform == TargetPlatform.macOS
-                ? 'known bug: macOS ignores the status of RegisterEventHotKey'
-                : null);
+    }, skip: _supported ? null : _unsupported);
   });
 }

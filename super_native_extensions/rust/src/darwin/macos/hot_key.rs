@@ -10,7 +10,7 @@ use irondash_message_channel::Late;
 use log::warn;
 
 use crate::{
-    error::NativeExtensionsResult,
+    error::{NativeExtensionsError, NativeExtensionsResult},
     hot_key_manager::{HotKeyCreateRequest, HotKeyHandle, HotKeyManagerDelegate},
 };
 
@@ -124,7 +124,7 @@ impl PlatformHotKeyManager {
 
         let mut key_ref: EventHotKeyRef = std::ptr::null_mut();
 
-        unsafe {
+        let status = unsafe {
             RegisterEventHotKey(
                 request.platform_code as u32,
                 modifiers,
@@ -132,8 +132,16 @@ impl PlatformHotKeyManager {
                 GetEventDispatcherTarget(),
                 0,
                 &mut key_ref as *mut _,
-            );
+            )
         };
+        // A key that is not registered never fires: report it, as Windows
+        // does when RegisterHotKey fails. -9878 (eventHotKeyExistsErr) means
+        // that the combination is taken.
+        if status != 0 {
+            return Err(NativeExtensionsError::OtherError(format!(
+                "RegisterEventHotKey failed: OSStatus {status}"
+            )));
+        }
 
         let key = HotKey { handle, key_ref };
 
