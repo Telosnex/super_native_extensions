@@ -3,6 +3,7 @@
 // the whole session: run them on a desktop that no one uses.
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
@@ -25,27 +26,43 @@ String? get systemMouseUnavailable {
 /// Drags with the system mouse from [from] to [to] (logical pixels in
 /// [view]): press, move in steps, release.
 Future<void> systemMouseDrag(FlutterView view, Offset from, Offset to) async {
-  final mouse =
-      Platform.isWindows ? _WindowsMouse(view) : await _X11Mouse.of(view);
+  if (Platform.isWindows) {
+    // DoDragDrop runs a modal loop on the platform thread, which also runs
+    // this isolate: another isolate (thread) moves the mouse meanwhile.
+    final ratio = view.devicePixelRatio;
+    final (x, y) = _WindowsMouse.viewOrigin();
+    final (fx, fy, tx, ty) = (from.dx, from.dy, to.dx, to.dy);
+    await Isolate.run(() => _drag(
+          _WindowsMouse(x, y, ratio),
+          Offset(fx, fy),
+          Offset(tx, ty),
+          (ms) async => sleep(Duration(milliseconds: ms)),
+        ));
+    return;
+  }
+  await _drag(await _X11Mouse.of(view), from, to,
+      (ms) => Future<void>.delayed(Duration(milliseconds: ms)));
+}
+
+Future<void> _drag(_Mouse mouse, Offset from, Offset to,
+    Future<void> Function(int ms) pause) async {
   await mouse.move(from);
-  await _pause();
+  await pause(50);
   await mouse.button(down: true);
-  await _pause();
+  await pause(50);
   const steps = 15;
   for (var i = 1; i <= steps; i++) {
     await mouse.move(Offset.lerp(from, to, i / steps)!);
-    await _pause();
+    await pause(50);
   }
   // Drop targets see the last position before the release.
-  await Future<void>.delayed(const Duration(milliseconds: 500));
+  await pause(500);
   await mouse.move(to + const Offset(1, 1));
-  await _pause();
+  await pause(50);
   await mouse.move(to);
-  await Future<void>.delayed(const Duration(milliseconds: 300));
+  await pause(300);
   await mouse.button(down: false);
 }
-
-Future<void> _pause() => Future<void>.delayed(const Duration(milliseconds: 50));
 
 abstract class _Mouse {
   Future<void> move(Offset logical);
@@ -82,42 +99,36 @@ final class _MouseInput extends Struct {
   external int dwExtraInfo;
 }
 
+final _user32 = DynamicLibrary.open('user32.dll');
+final _findWindow = _user32.lookupFunction<
+    IntPtr Function(Pointer<Utf16>, Pointer<Utf16>),
+    int Function(Pointer<Utf16>, Pointer<Utf16>)>('FindWindowW');
+final _findWindowEx = _user32.lookupFunction<
+    IntPtr Function(IntPtr, IntPtr, Pointer<Utf16>, Pointer<Utf16>),
+    int Function(int, int, Pointer<Utf16>, Pointer<Utf16>)>('FindWindowExW');
+final _clientToScreen = _user32.lookupFunction<
+    Int32 Function(IntPtr, Pointer<_Point>),
+    int Function(int, Pointer<_Point>)>('ClientToScreen');
+final _setCursorPos = _user32.lookupFunction<Int32 Function(Int32, Int32),
+    int Function(int, int)>('SetCursorPos');
+final _setForegroundWindow =
+    _user32.lookupFunction<Int32 Function(IntPtr), int Function(int)>(
+        'SetForegroundWindow');
+final _sendInput = _user32.lookupFunction<
+    Uint32 Function(Uint32, Pointer<_MouseInput>, Int32),
+    int Function(int, Pointer<_MouseInput>, int)>('SendInput');
+
+/// Plain values only: it is built in the isolate that moves the mouse.
 class _WindowsMouse implements _Mouse {
-  _WindowsMouse(this.view) {
-    final user32 = DynamicLibrary.open('user32.dll');
-    _findWindow = user32.lookupFunction<
-        IntPtr Function(Pointer<Utf16>, Pointer<Utf16>),
-        int Function(Pointer<Utf16>, Pointer<Utf16>)>('FindWindowW');
-    _findWindowEx = user32.lookupFunction<
-        IntPtr Function(IntPtr, IntPtr, Pointer<Utf16>, Pointer<Utf16>),
-        int Function(
-            int, int, Pointer<Utf16>, Pointer<Utf16>)>('FindWindowExW');
-    _clientToScreen = user32.lookupFunction<
-        Int32 Function(IntPtr, Pointer<_Point>),
-        int Function(int, Pointer<_Point>)>('ClientToScreen');
-    _setCursorPos = user32.lookupFunction<Int32 Function(Int32, Int32),
-        int Function(int, int)>('SetCursorPos');
-    _setForegroundWindow =
-        user32.lookupFunction<Int32 Function(IntPtr), int Function(int)>(
-            'SetForegroundWindow');
-    _sendInput = user32.lookupFunction<
-        Uint32 Function(Uint32, Pointer<_MouseInput>, Int32),
-        int Function(int, Pointer<_MouseInput>, int)>('SendInput');
-    _origin = _viewOrigin();
-  }
+  _WindowsMouse(this._x, this._y, this._ratio);
 
-  final FlutterView view;
-  late final int Function(Pointer<Utf16>, Pointer<Utf16>) _findWindow;
-  late final int Function(int, int, Pointer<Utf16>, Pointer<Utf16>)
-      _findWindowEx;
-  late final int Function(int, Pointer<_Point>) _clientToScreen;
-  late final int Function(int, int) _setCursorPos;
-  late final int Function(int) _setForegroundWindow;
-  late final int Function(int, Pointer<_MouseInput>, int) _sendInput;
-  late final (int, int) _origin;
+  final int _x;
+  final int _y;
+  final double _ratio;
 
-  /// The screen position of the Flutter view's client area.
-  (int, int) _viewOrigin() => using((arena) {
+  /// The screen position of the Flutter view's client area. Brings the
+  /// window to the front.
+  static (int, int) viewOrigin() => using((arena) {
         final window = _findWindow(
             'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16(allocator: arena),
             nullptr);
@@ -132,10 +143,9 @@ class _WindowsMouse implements _Mouse {
 
   @override
   Future<void> move(Offset logical) async {
-    final ratio = view.devicePixelRatio;
-    _setCursorPos(_origin.$1 + (logical.dx * ratio).round(),
-        _origin.$2 + (logical.dy * ratio).round());
-    _send(0x0001, relative: true); // MOUSEEVENTF_MOVE by 0: a move message.
+    _setCursorPos(
+        _x + (logical.dx * _ratio).round(), _y + (logical.dy * _ratio).round());
+    _send(0x0001); // MOUSEEVENTF_MOVE by 0: a move message.
   }
 
   @override
@@ -143,7 +153,7 @@ class _WindowsMouse implements _Mouse {
     _send(down ? 0x0002 : 0x0004); // MOUSEEVENTF_LEFTDOWN / LEFTUP
   }
 
-  void _send(int flags, {bool relative = false}) {
+  void _send(int flags) {
     final input = calloc<_MouseInput>();
     try {
       input.ref
