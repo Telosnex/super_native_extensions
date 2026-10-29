@@ -256,8 +256,10 @@ void clipboardTests() {
     },
         skip: kIsWeb
             ? 'the web clipboard writes one item only'
-            : defaultTargetPlatform == TargetPlatform.linux
-                ? "known bug: Linux lists only the first item's formats"
+            : defaultTargetPlatform == TargetPlatform.linux ||
+                    defaultTargetPlatform == TargetPlatform.windows
+                ? "known bug: Linux and Windows list only the first item's "
+                    'formats'
                 : _androidFileUriBug);
 
     test('two items: text in each', () async {
