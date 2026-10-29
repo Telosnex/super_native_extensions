@@ -42,10 +42,14 @@ jobs:
     timeout-minutes: 45
     env:
       DEVICE: linux
+      ROOT: ${{ github.workspace }}
     steps: &desktop_steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Short path
+        if: runner.os == 'Windows'
+        run: subst "$ROOT" "$(cygpath -w "$GITHUB_WORKSPACE")"
       - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
       - name: Linux build dependencies, Xvfb and xdotool
         if: runner.os == 'Linux'
@@ -63,6 +67,7 @@ jobs:
       # Through pub global run: on Windows pub installs melos.bat, which
       # bash does not run as melos.
       - name: Melos bootstrap
+        working-directory: ${{ env.ROOT }}
         run: |
           flutter pub global activate melos
           flutter pub global run melos bootstrap
@@ -70,7 +75,7 @@ jobs:
         id: clipboard
         uses: Telosnex/telosnex_ci_tools/actions/watch@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
         with:
-          working-directory: ${{ env.CLIPBOARD }}
+          working-directory: ${{ env.ROOT }}/${{ env.CLIPBOARD }}
           # The first build (and a Rust source build) prints nothing for minutes.
           idle-minutes: '15'
           run: |
@@ -82,7 +87,7 @@ jobs:
         if: success() || steps.clipboard.outcome == 'failure'
         uses: Telosnex/telosnex_ci_tools/actions/watch@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
         with:
-          working-directory: ${{ env.DRAG }}
+          working-directory: ${{ env.ROOT }}/${{ env.DRAG }}
           idle-minutes: '15'
           run: |
             run=(flutter test integration_test/all_tests.dart -d "$DEVICE" -r expanded)
@@ -106,6 +111,7 @@ jobs:
     timeout-minutes: 45
     env:
       DEVICE: linux
+      ROOT: ${{ github.workspace }}
     steps: *desktop_steps
 
   desktop-macos-arm64:
@@ -114,6 +120,7 @@ jobs:
     timeout-minutes: 45
     env:
       DEVICE: macos
+      ROOT: ${{ github.workspace }}
     steps: *desktop_steps
 
   desktop-windows-x64:
@@ -122,6 +129,10 @@ jobs:
     timeout-minutes: 45
     env:
       DEVICE: windows
+      # A short root (subst): a Rust source build's paths under
+      # D:\a\super_native_extensions\super_native_extensions\...\.dart_tool
+      # pass MAX_PATH, and link.exe fails (LNK1104).
+      ROOT: 'S:'
     steps: *desktop_steps
 
   # Chrome, through flutter drive and the web driver. One app after the
