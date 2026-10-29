@@ -18,6 +18,9 @@ use irondash_run_loop::util::FutureCompleter;
 
 use super::common::{AtomExt, TYPE_TEXT};
 
+// async_trait marks each method #[must_use] on a Future, which is already
+// #[must_use]: clippy 1.99 (double_must_use) rejects that.
+#[allow(clippy::double_must_use)]
 #[async_trait(?Send)]
 pub trait ClipboardAsync {
     async fn get_targets(&self) -> Vec<String>;
