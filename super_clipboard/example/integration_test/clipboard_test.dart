@@ -46,16 +46,8 @@ const _webFileFormats =
     'the web clipboard writes text/plain, text/html and image/png only';
 const _webFileUris = 'web has no file URIs';
 
-/// Known bug: on Android a file URI goes into ClipData as file://, and
-/// setPrimaryClip throws FileUriExposedException (targetSdk 24+), which
-/// ends the app.
-final _androidFileUriBug =
-    !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-        ? 'known bug: Android ends the app (FileUriExposedException)'
-        : null;
-
 /// Whether this platform can put a file URI on the clipboard.
-final _fileUris = !kIsWeb && _androidFileUriBug == null;
+const _fileUris = !kIsWeb;
 
 /// Calls [IntegrationTestWidgetsFlutterBinding.ensureInitialized] and the web
 /// test support. Call it once, first thing in main.
@@ -195,7 +187,7 @@ void clipboardTests() {
       expect(reader.canProvide(Formats.fileUri), isTrue,
           reason: 'formats on the clipboard: ${reader.platformFormats}');
       expect(await reader.readValue(Formats.fileUri), file);
-    }, skip: kIsWeb ? _webFileUris : _androidFileUriBug);
+    }, skip: kIsWeb ? _webFileUris : null);
 
     test('one item with every format', () async {
       final file = _fileUris
@@ -235,10 +227,10 @@ void clipboardTests() {
           reason: 'formats on the clipboard: ${reader.platformFormats}');
       expect(await reader.items[0].readValue(Formats.fileUri), a);
       expect(await reader.items[1].readValue(Formats.fileUri), b);
-    }, skip: kIsWeb ? _webFileUris : _androidFileUriBug);
+    }, skip: kIsWeb ? _webFileUris : null);
 
-    // README: Windows and Linux keep only file URIs and URIs past the first
-    // item.
+    // The Windows and Linux clipboards have one set of formats, not items:
+    // the items are merged, and the reader sees one item per file (README).
     test('two items: text and image, then a file URI', () async {
       final file = await createTempFile('second item.txt', 'second');
       await _write([
@@ -246,21 +238,17 @@ void clipboardTests() {
         _item([Formats.fileUri(file)]),
       ]);
       final reader = await _clipboard.read();
-      expect(reader.items, hasLength(2),
+      final merged = !kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.windows ||
+              defaultTargetPlatform == TargetPlatform.linux);
+      expect(reader.items, hasLength(merged ? 1 : 2),
           reason: 'formats on the clipboard: ${reader.platformFormats}');
-      final first = reader.items[0];
-      final second = reader.items[1];
+      final first = reader.items.first;
+      final second = reader.items.last;
       expect(await first.readValue(Formats.plainText), _text);
       expect(await _readFile(first, Formats.png), orderedEquals(_png));
       expect(await second.readValue(Formats.fileUri), file);
-    },
-        skip: kIsWeb
-            ? 'the web clipboard writes one item only'
-            : defaultTargetPlatform == TargetPlatform.linux ||
-                    defaultTargetPlatform == TargetPlatform.windows
-                ? "known bug: Linux and Windows list only the first item's "
-                    'formats'
-                : _androidFileUriBug);
+    }, skip: kIsWeb ? 'the web clipboard writes one item only' : null);
 
     test('two items: text in each', () async {
       await _write([
@@ -306,8 +294,6 @@ void clipboardTests() {
     },
         skip: kIsWeb
             ? "Chrome's clipboard.write([]) keeps the old content"
-            : defaultTargetPlatform == TargetPlatform.android
-                ? 'known bug: Android ends the app (setPrimaryClip(null))'
-                : null);
+            : null);
   });
 }

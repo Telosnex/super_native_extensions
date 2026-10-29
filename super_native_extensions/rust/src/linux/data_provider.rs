@@ -154,12 +154,26 @@ impl DataObject {
                 }
             }
             Self::set_data_(selection_data, &data)?;
-        } else if let Some(item) = self.providers.first() {
+        } else if let Some(item) = self
+            .providers
+            .iter()
+            .find(|item| Self::item_has_format(&item.provider, &target))
+        {
+            // The clipboard holds one set of targets: the first item with
+            // the format provides it.
             if let Some(data) = self.get_data_for_item(&item.provider, &target) {
                 Self::set_data_(selection_data, &data)?;
             }
         }
         Ok(())
+    }
+
+    fn item_has_format(item: &PlatformDataProvider, ty: &str) -> bool {
+        item.data.representations.iter().any(|repr| match repr {
+            DataRepresentation::Simple { format, data: _ } => format == ty,
+            DataRepresentation::Lazy { format, id: _ } => format == ty,
+            _ => false,
+        })
     }
 
     pub fn write_to_clipboard(self: &Rc<Self>) -> NativeExtensionsResult<()> {
@@ -186,16 +200,19 @@ impl DataObject {
                 list.add(&Atom::intern(ty), 0, 0);
             }
         }
-        if let Some(item) = self.providers.first() {
+        // The formats of every item, each once: the GTK clipboard has no
+        // items, so they are merged (see get_data).
+        let mut added = Vec::<&str>::new();
+        for item in &self.providers {
             for repr in &item.provider.data.representations {
-                match repr {
-                    DataRepresentation::Simple { format, data: _ } => {
-                        add(&list, format);
-                    }
-                    DataRepresentation::Lazy { format, id: _ } => {
-                        add(&list, format);
-                    }
-                    _ => {}
+                let format = match repr {
+                    DataRepresentation::Simple { format, data: _ } => format,
+                    DataRepresentation::Lazy { format, id: _ } => format,
+                    _ => continue,
+                };
+                if !added.contains(&format.as_str()) {
+                    added.push(format);
+                    add(&list, format);
                 }
             }
         }

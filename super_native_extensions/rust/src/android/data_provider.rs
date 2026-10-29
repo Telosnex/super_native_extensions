@@ -81,6 +81,13 @@ pub const MIME_TYPE_TEXT_PLAIN: &str = "text/plain";
 pub const MIME_TYPE_TEXT_HTML: &str = "text/html";
 pub const MIME_TYPE_URI_LIST: &str = "text/uri-list";
 
+/// Whether a text/uri-list value starts with a file: URI.
+fn is_file_uri(data: &[u8]) -> bool {
+    let text = String::from_utf8_lossy(data);
+    let first = text.trim_start().get(..5).unwrap_or_default();
+    first.eq_ignore_ascii_case("file:")
+}
+
 fn contains(l: &[String], s: &str) -> bool {
     l.iter().any(|v| v == s)
 }
@@ -159,7 +166,16 @@ impl PlatformDataProvider {
                         MIME_TYPE_URI_LIST => {
                             if uri.is_none() {
                                 // do not replace URI, might be a content URI
-                                uri = Some(uri_from_utf8(env, &data)?);
+                                uri = Some(if is_file_uri(&data) {
+                                    // A file:// URI in ClipData ends the app
+                                    // (FileUriExposedException, targetSdk
+                                    // 24+), and other apps could not open
+                                    // it anyway. The data provider serves
+                                    // the URI list instead, as for images.
+                                    Self::content_provider_uri(env, data_provider_id)?
+                                } else {
+                                    uri_from_utf8(env, &data)?
+                                });
                             }
                             if !contains(clipboard_mime_types, MIME_TYPE_URI_LIST) {
                                 clipboard_mime_types.push(MIME_TYPE_URI_LIST.into());
@@ -311,6 +327,17 @@ impl PlatformDataProvider {
                 &[(&clipboard_service).into()],
             )?
             .l()?;
+        if env.is_same_object(&clip_data, JObject::null())? {
+            // No items: setPrimaryClip(null) throws. Clear the clipboard
+            // where Android can (API 28+); before that, leave it as it is.
+            let sdk_int = env
+                .get_static_field("android/os/Build$VERSION", "SDK_INT", "I")?
+                .i()?;
+            if sdk_int >= 28 {
+                env.call_method(clipboard_manager, "clearPrimaryClip", "()V", &[])?;
+            }
+            return Ok(());
+        }
         env.call_method(
             clipboard_manager,
             "setPrimaryClip",
@@ -326,6 +353,20 @@ impl Drop for PlatformDataProvider {
     fn drop(&mut self) {
         let mut data_providers = DATA_PROVIDERS.lock().unwrap();
         data_providers.remove(&self.data_provider_id);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_file_uri;
+
+    #[test]
+    fn file_uris() {
+        assert!(is_file_uri(b"file:///data/user/0/a.txt"));
+        assert!(is_file_uri(b"FILE:///a"));
+        assert!(!is_file_uri(b"content://a/1"));
+        assert!(!is_file_uri(b"https://example.com"));
+        assert!(!is_file_uri(b"fil"));
     }
 }
 

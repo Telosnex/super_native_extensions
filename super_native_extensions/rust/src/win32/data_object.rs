@@ -140,6 +140,24 @@ impl DataObject {
         }
     }
 
+    /// The data of [format] from the first item that has it.
+    fn data_for_any_item(&self, format: u32) -> Option<Vec<u8>> {
+        let format_string = format_to_string(format);
+        let index = self.providers.iter().position(|provider| {
+            provider
+                .provider
+                .data
+                .representations
+                .iter()
+                .any(|repr| match repr {
+                    DataRepresentation::Simple { format, data: _ } => format == &format_string,
+                    DataRepresentation::Lazy { format, id: _ } => format == &format_string,
+                    _ => false,
+                })
+        })?;
+        self.data_for_format(format, index)
+    }
+
     fn data_for_format(&self, format: u32, index: usize) -> Option<Vec<u8>> {
         let provider = self.providers.get(index).as_ref().cloned();
         if let Some(provider) = provider {
@@ -263,20 +281,22 @@ impl DataObject {
                 }
             }
         }
-        // Regular and lazy items second
-        let first_provider = self.providers.first();
-        if let Some(provider) = first_provider {
+        // Regular and lazy items second: the formats of every item, each
+        // once. The clipboard has one data object, so the items are merged:
+        // the first item with a format provides it (data_for_any_item), and
+        // CF_HDROP joins the files of all items.
+        let mut regular = Vec::<u32>::new();
+        for provider in &self.providers {
             for representation in &provider.provider.data.representations {
-                match representation {
-                    DataRepresentation::Simple { format, data: _ } => {
-                        let format = format_from_string(format);
-                        res.push(make_format_with_tymed(format, TYMED_HGLOBAL));
-                    }
-                    DataRepresentation::Lazy { format, id: _ } => {
-                        let format = format_from_string(format);
-                        res.push(make_format_with_tymed(format, TYMED_HGLOBAL));
-                    }
-                    _ => {}
+                let format = match representation {
+                    DataRepresentation::Simple { format, data: _ } => format,
+                    DataRepresentation::Lazy { format, id: _ } => format,
+                    _ => continue,
+                };
+                let format = format_from_string(format);
+                if !regular.contains(&format) {
+                    regular.push(format);
+                    res.push(make_format_with_tymed(format, TYMED_HGLOBAL));
                 }
             }
         }
@@ -519,7 +539,7 @@ impl IDataObject_Impl for DataObject {
                 } else if needs_generate_bitmap && format.cfFormat == CF_DIBV5.0 {
                     self.synthesize_bitmap_data(true).ok_log()
                 } else {
-                    self.data_for_format(format.cfFormat as u32, 0)
+                    self.data_for_any_item(format.cfFormat as u32)
                 }
             });
 

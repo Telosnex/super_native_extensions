@@ -148,7 +148,7 @@ On some platform the data may be requested eagerly when writing to clipboard. In
 
 When writing images preferred format is PNG. Most platforms can handle PNG images in clipboard natively. On Windows PNGs are on-demand converted to DIB and DIBv5 formats, which is what native applications expect.
 
-While the Clipboard API supports writing multiple items, not all platforms support that fully. On Windows clipboard items past the first one only support `Formats.fileUri` type (so it is possible to store multiple file URIs in clipboard) and on Linux only supported formats for additional items are `Formats.uri` and `Formats.fileUri`.
+While the Clipboard API supports writing multiple items, not all platforms support that fully. The Windows and Linux clipboards hold one set of formats, not items, so the items are merged: each format comes from the first item that has it, and the file URIs of all items (and on Linux, all URIs) are joined into one list. When reading, each file URI is a separate item; the other formats are on the first item. So you can copy several files, or text and images together with files, but two items with text each give the text of the first item only.
 
 ### Accessing clipboard on web
 

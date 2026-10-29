@@ -1,4 +1,4 @@
-library super_hot_key;
+library;
 
 import 'package:flutter/services.dart';
 import 'package:super_keyboard_layout/super_keyboard_layout.dart';
@@ -42,6 +42,12 @@ class HotKey {
   final VoidCallback? onPressed;
   final VoidCallback? onReleased;
 
+  /// Registers a global hot key for [definition].
+  ///
+  /// Returns null where global hot keys are not supported (only macOS and
+  /// Windows have them). Throws a [PlatformException] when the system does
+  /// not register the key, for example when the combination is already
+  /// taken by this or another app.
   static Future<HotKey?> create({
     required HotKeyDefinition definition,
     VoidCallback? onPressed,
@@ -101,7 +107,7 @@ class _HotKeyManager extends raw.HotKeyManagerDelegate {
   }
 
   Future<void> destroyHotKey(HotKey hotKey) async {
-    _hotKeys.remove(hotKey);
+    _hotKeys.remove(hotKey._handle);
     await raw.HotKeyManager.instance.destroyHotKey(hotKey._handle);
   }
 
