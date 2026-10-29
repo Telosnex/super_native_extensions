@@ -50,6 +50,9 @@ impl From<DropNotifier> for DataProviderHandle {
     }
 }
 
+// async_trait marks each method #[must_use] on a Future, which is already
+// #[must_use]: clippy 1.99 (double_must_use) rejects that.
+#[allow(clippy::double_must_use)]
 #[async_trait(?Send)]
 pub trait PlatformDataProviderDelegate {
     fn get_lazy_data(
