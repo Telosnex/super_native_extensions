@@ -64,13 +64,14 @@ jobs:
             curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
             echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           fi
-      # Through pub global run: on Windows pub installs melos.bat, which
-      # bash does not run as melos.
+      # The workspace's melos (root pubspec.lock), through dart run: a
+      # global melos 7+ wants a pub workspace, and on Windows a global melos
+      # is melos.bat, which bash does not run as melos.
       - name: Melos bootstrap
         working-directory: ${{ env.ROOT }}
         run: |
-          flutter pub global activate melos
-          flutter pub global run melos bootstrap
+          flutter pub get
+          dart run melos bootstrap
       - name: Clipboard
         id: clipboard
         uses: Telosnex/telosnex_ci_tools/actions/watch@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
@@ -148,12 +149,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
-      # Through pub global run: on Windows pub installs melos.bat, which
-      # bash does not run as melos.
+      # The workspace's melos (root pubspec.lock), through dart run: a
+      # global melos 7+ wants a pub workspace, and on Windows a global melos
+      # is melos.bat, which bash does not run as melos.
       - name: Melos bootstrap
         run: |
-          flutter pub global activate melos
-          flutter pub global run melos bootstrap
+          flutter pub get
+          dart run melos bootstrap
       - name: Clipboard
         id: clipboard
         uses: Telosnex/telosnex_ci_tools/actions/web-driver@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
@@ -205,12 +207,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
-      # Through pub global run: on Windows pub installs melos.bat, which
-      # bash does not run as melos.
+      # The workspace's melos (root pubspec.lock), through dart run: a
+      # global melos 7+ wants a pub workspace, and on Windows a global melos
+      # is melos.bat, which bash does not run as melos.
       - name: Melos bootstrap
         run: |
-          flutter pub global activate melos
-          flutter pub global run melos bootstrap
+          flutter pub get
+          dart run melos bootstrap
       # A source build of the library (see the top of this file) needs the
       # NDK of the release builds.
       - name: Android NDK 28.2.13676358
@@ -264,12 +267,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
-      # Through pub global run: on Windows pub installs melos.bat, which
-      # bash does not run as melos.
+      # The workspace's melos (root pubspec.lock), through dart run: a
+      # global melos 7+ wants a pub workspace, and on Windows a global melos
+      # is melos.bat, which bash does not run as melos.
       - name: Melos bootstrap
         run: |
-          flutter pub global activate melos
-          flutter pub global run melos bootstrap
+          flutter pub get
+          dart run melos bootstrap
       - uses: Telosnex/telosnex_ci_tools/actions/ios-simulator-boot@cba77fc0d4330f1bef81193c53cd7dd976f0ebcf # v0.5.3
         id: simulator
       # No build ahead: Xcode rebuilds for flutter test's destination anyway.
