@@ -327,6 +327,17 @@ impl PlatformDataProvider {
                 &[(&clipboard_service).into()],
             )?
             .l()?;
+        if env.is_same_object(&clip_data, JObject::null())? {
+            // No items: setPrimaryClip(null) throws. Clear the clipboard
+            // where Android can (API 28+); before that, leave it as it is.
+            let sdk_int = env
+                .get_static_field("android/os/Build$VERSION", "SDK_INT", "I")?
+                .i()?;
+            if sdk_int >= 28 {
+                env.call_method(clipboard_manager, "clearPrimaryClip", "()V", &[])?;
+            }
+            return Ok(());
+        }
         env.call_method(
             clipboard_manager,
             "setPrimaryClip",

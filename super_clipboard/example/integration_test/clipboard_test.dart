@@ -298,8 +298,6 @@ void clipboardTests() {
     },
         skip: kIsWeb
             ? "Chrome's clipboard.write([]) keeps the old content"
-            : defaultTargetPlatform == TargetPlatform.android
-                ? 'known bug: Android ends the app (setPrimaryClip(null))'
-                : null);
+            : null);
   });
 }
