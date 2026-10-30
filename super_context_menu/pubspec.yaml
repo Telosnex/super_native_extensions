@@ -13,7 +13,9 @@ dependencies:
   super_native_extensions: ^0.10.0-dev.2
   collection: ^1.16.0
   device_info_plus: ">=10.0.1 <14.0.0"
-  pixel_snap: ^0.1.1
+  pixel_snap_fork:
+    git:
+      url: https://github.com/Telosnex/pixel_snap_fork.git
 
 dev_dependencies:
   flutter_test:

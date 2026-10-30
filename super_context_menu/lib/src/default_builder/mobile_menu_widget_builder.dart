@@ -8,7 +8,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart'
     show Colors, Icons, CircularProgressIndicator, Scrollbar;
-import 'package:pixel_snap/widgets.dart';
+import 'package:pixel_snap_fork/widgets.dart';
 
 import '../menu_model.dart';
 import '../scaffold/mobile/menu_widget_builder.dart';

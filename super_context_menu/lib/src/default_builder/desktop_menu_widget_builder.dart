@@ -4,7 +4,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart'
     show Colors, Icons, CircularProgressIndicator;
-import 'package:pixel_snap/widgets.dart';
+import 'package:pixel_snap_fork/widgets.dart';
 import 'package:super_context_menu/src/default_builder/group_intrinsic_width.dart';
 
 import '../menu_model.dart';

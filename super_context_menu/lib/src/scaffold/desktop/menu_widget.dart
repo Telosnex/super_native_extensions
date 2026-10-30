@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:pixel_snap/pixel_snap.dart';
+import 'package:pixel_snap_fork/pixel_snap.dart';
 
 import '../../menu_model.dart';
 import '../common/deferred_menu_items.dart';

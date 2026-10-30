@@ -1,6 +1,6 @@
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
-import 'package:pixel_snap/pixel_snap.dart';
+import 'package:pixel_snap_fork/pixel_snap.dart';
 
 enum MenuLayoutEdge { left, right }
 
