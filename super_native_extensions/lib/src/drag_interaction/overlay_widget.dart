@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
-import 'package:pixel_snap/pixel_snap.dart';
+import 'package:pixel_snap_fork/pixel_snap.dart';
 
 import '../gesture/multi_touch_detector.dart';
 import '../menu.dart';

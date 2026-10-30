@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 
 import 'package:flutter/rendering.dart';
-import 'package:pixel_snap/pixel_snap.dart';
+import 'package:pixel_snap_fork/pixel_snap.dart';
 
 import '../widget_snapshot/widget_snapshot.dart';
 import 'drag_state_machine.dart';
