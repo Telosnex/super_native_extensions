@@ -23,9 +23,7 @@ dependencies:
   irondash_engine_context: ^0.6.0-dev.0
   irondash_message_channel: ^0.8.0-dev.0
   device_info_plus: ">=10.0.1 <14.0.0"
-  pixel_snap_fork:
-    git:
-      url: https://github.com/Telosnex/pixel_snap_fork.git
+  pixel_snap_fork: ^0.1.5
   web: ^1.0.0
   kiln: ^0.1.1
 
