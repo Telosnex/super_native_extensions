@@ -33,12 +33,18 @@ Future<void> systemMouseDrag(FlutterView view, Offset from, Offset to) async {
     final ratio = view.devicePixelRatio;
     final (x, y) = _WindowsMouse.viewOrigin();
     final (fx, fy, tx, ty) = (from.dx, from.dy, to.dx, to.dy);
-    await Isolate.run(() => _drag(
-          _WindowsMouse(x, y, ratio),
-          Offset(fx, fy),
-          Offset(tx, ty),
-          (ms) async => sleep(Duration(milliseconds: ms)),
-        ));
+    final notes = await Isolate.run(() async {
+      final mouse = _WindowsMouse(x, y, ratio);
+      await _drag(
+        mouse,
+        Offset(fx, fy),
+        Offset(tx, ty),
+        (ms) async => sleep(Duration(milliseconds: ms)),
+      );
+      return mouse.notes;
+    });
+    // Printed here: the output of another isolate does not reach the test.
+    notes.forEach(debugPrint);
     return;
   }
   await _drag(await _X11Mouse.of(view), from, to,
@@ -151,7 +157,8 @@ class _WindowsMouse implements _Mouse {
         return (point.ref.x, point.ref.y);
       });
 
-  var _described = false;
+  /// What the first move found, for a drag that does not start.
+  final notes = <String>[];
 
   @override
   Future<void> move(Offset logical) async {
@@ -159,15 +166,12 @@ class _WindowsMouse implements _Mouse {
     final y = _y + (logical.dy * _ratio).round();
     _setCursorPos(x, y);
     _send(0x0001); // MOUSEEVENTF_MOVE by 0: a move message.
-    if (!_described) {
-      _described = true;
-      _describe(x, y);
-    }
+    if (notes.isEmpty) notes.add(_describe(x, y));
   }
 
   /// For a drag that does not start: where the cursor is, and whether the
   /// app's window is under it and in front.
-  static void _describe(int x, int y) => using((arena) {
+  static String _describe(int x, int y) => using((arena) {
         final point = arena<_Point>();
         _getCursorPos(point);
         final cursor = (point.ref.x, point.ref.y);
@@ -176,9 +180,9 @@ class _WindowsMouse implements _Mouse {
             nullptr);
         final under = _getAncestor(_windowFromPoint(point.ref), 2); // GA_ROOT
         final front = _getForegroundWindow();
-        debugPrint('[system mouse] cursor $cursor (set ($x, $y)); '
+        return '[system mouse] cursor $cursor (set ($x, $y)); '
             'under it: ${under == app ? 'the app' : 'window $under'}; '
-            'in front: ${front == app ? 'the app' : 'window $front'}');
+            'in front: ${front == app ? 'the app' : 'window $front'}';
       });
 
   @override

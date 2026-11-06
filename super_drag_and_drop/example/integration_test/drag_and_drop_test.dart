@@ -209,8 +209,15 @@ final _useSystemMouse = !kIsWeb &&
         defaultTargetPlatform == TargetPlatform.linux);
 
 /// Why a drag session cannot start here without a human, or null.
-final String? _noDrag =
-    _mobile ?? (_useSystemMouse ? systemMouseUnavailable : null);
+final String? _noDrag = _mobile ??
+    (_useSystemMouse
+        ? systemMouseUnavailable
+        : !kIsWeb &&
+                defaultTargetPlatform == TargetPlatform.macOS &&
+                !canSendMacOSEvents
+            ? 'AppKit starts a drag from an NSEvent mouse-down, which this '
+                'test sends on ARM64 only'
+            : null);
 
 /// Why a drag cannot be carried to a drop here without a human, or null.
 final String? _noFullDrop = _noDrag ??
