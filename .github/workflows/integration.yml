@@ -83,6 +83,17 @@ jobs:
             run=(flutter test integration_test/clipboard_test.dart -d "$DEVICE" -r expanded)
             if [[ "$RUNNER_OS" == Linux ]]; then run=(xvfb-run -a "${run[@]}"); fi
             "${run[@]}"
+      # The windows-11-arm image shows a "Microsoft account" sign-in window
+      # in front of every app; the drag's mouse input goes to it. Topmost
+      # and SetForegroundWindow do not move the app in front of it.
+      - name: Close the sign-in window
+        if: (success() || steps.clipboard.outcome == 'failure') && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Get-Process | Where-Object { $_.MainWindowTitle } |
+            Format-Table Id, ProcessName, MainWindowTitle -AutoSize | Out-String -Width 200
+          Get-Process | Where-Object { $_.MainWindowTitle -eq 'Microsoft account' } |
+            ForEach-Object { "closing $($_.ProcessName) ($($_.Id))"; Stop-Process -Id $_.Id -Force }
       - name: Drag and drop, hot keys
         # Also after failed clipboard tests, not after a failed setup.
         if: success() || steps.clipboard.outcome == 'failure'
