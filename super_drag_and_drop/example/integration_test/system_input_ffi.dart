@@ -130,6 +130,18 @@ final _getForegroundWindow = _user32
     .lookupFunction<IntPtr Function(), int Function()>('GetForegroundWindow');
 final _getAncestor = _user32.lookupFunction<IntPtr Function(IntPtr, Uint32),
     int Function(int, int)>('GetAncestor');
+final _setWindowPos = _user32.lookupFunction<
+    Int32 Function(IntPtr, IntPtr, Int32, Int32, Int32, Int32, Uint32),
+    int Function(int, int, int, int, int, int, int)>('SetWindowPos');
+final _keybdEvent = _user32.lookupFunction<
+    Void Function(Uint8, Uint8, Uint32, IntPtr),
+    void Function(int, int, int, int)>('keybd_event');
+final _getClassName = _user32.lookupFunction<
+    Int32 Function(IntPtr, Pointer<Utf16>, Int32),
+    int Function(int, Pointer<Utf16>, int)>('GetClassNameW');
+final _getWindowText = _user32.lookupFunction<
+    Int32 Function(IntPtr, Pointer<Utf16>, Int32),
+    int Function(int, Pointer<Utf16>, int)>('GetWindowTextW');
 final _sendInput = _user32.lookupFunction<
     Uint32 Function(Uint32, Pointer<_MouseInput>, Int32),
     int Function(int, Pointer<_MouseInput>, int)>('SendInput');
@@ -149,7 +161,7 @@ class _WindowsMouse implements _Mouse {
             'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16(allocator: arena),
             nullptr);
         if (window == 0) throw StateError('no Flutter window');
-        _setForegroundWindow(window);
+        _bringToFront(window);
         final child = _findWindowEx(
             window, 0, 'FLUTTERVIEW'.toNativeUtf16(allocator: arena), nullptr);
         final point = arena<_Point>();
@@ -169,6 +181,29 @@ class _WindowsMouse implements _Mouse {
     if (notes.isEmpty) notes.add(_describe(x, y));
   }
 
+  /// Puts [window] in front of every other window, under the cursor.
+  /// SetForegroundWindow alone can fail (the foreground lock: on
+  /// windows-11-arm another window stayed in front): a key press first
+  /// lifts the lock, and HWND_TOPMOST keeps topmost windows from covering
+  /// the app.
+  static void _bringToFront(int window) {
+    const vkMenu = 0x12; // Alt
+    const keyUp = 0x0002; // KEYEVENTF_KEYUP
+    _keybdEvent(vkMenu, 0, 0, 0);
+    _keybdEvent(vkMenu, 0, keyUp, 0);
+    // HWND_TOPMOST, SWP_NOMOVE | SWP_NOSIZE.
+    _setWindowPos(window, -1, 0, 0, 0, 0, 0x0002 | 0x0001);
+    _setForegroundWindow(window);
+  }
+
+  static String _name(int window) => using((arena) {
+        final text = arena<Uint16>(256).cast<Utf16>();
+        _getClassName(window, text, 256);
+        final className = text.toDartString();
+        _getWindowText(window, text, 256);
+        return '$window ($className "${text.toDartString()}")';
+      });
+
   /// For a drag that does not start: where the cursor is, and whether the
   /// app's window is under it and in front.
   static String _describe(int x, int y) => using((arena) {
@@ -181,8 +216,8 @@ class _WindowsMouse implements _Mouse {
         final under = _getAncestor(_windowFromPoint(point.ref), 2); // GA_ROOT
         final front = _getForegroundWindow();
         return '[system mouse] cursor $cursor (set ($x, $y)); '
-            'under it: ${under == app ? 'the app' : 'window $under'}; '
-            'in front: ${front == app ? 'the app' : 'window $front'}';
+            'under it: ${under == app ? 'the app' : 'window ${_name(under)}'}; '
+            'in front: ${front == app ? 'the app' : 'window ${_name(front)}'}';
       });
 
   @override
