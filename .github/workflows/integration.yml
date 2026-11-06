@@ -124,6 +124,15 @@ jobs:
       ROOT: ${{ github.workspace }}
     steps: *desktop_steps
 
+  desktop-macos-x64:
+    name: macOS x64
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    env:
+      DEVICE: macos
+      ROOT: ${{ github.workspace }}
+    steps: *desktop_steps
+
   desktop-windows-x64:
     name: Windows x64
     runs-on: windows-2025
@@ -136,13 +145,24 @@ jobs:
       ROOT: 'S:'
     steps: *desktop_steps
 
-  # Chrome, through flutter drive and the web driver. One app after the
-  # other: each use of web-driver has its own driver port and artifact.
+  desktop-windows-arm64:
+    name: Windows ARM64
+    runs-on: windows-11-arm
+    timeout-minutes: 45
+    env:
+      DEVICE: windows
+      ROOT: 'S:'
+    steps: *desktop_steps
+
+  # The browsers, through flutter drive and the web driver: the clipboard
+  # and drag and drop APIs differ between them. One app after the other:
+  # each use of web-driver has its own driver port and artifact.
   web-linux-chrome-dart2js:
     name: Web Linux x64 Chrome dart2js
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
+      BROWSER: chrome
       COMPILER: dart2js
     steps: &web_steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -160,16 +180,16 @@ jobs:
         id: clipboard
         uses: Telosnex/telosnex_ci_tools/actions/web-driver@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
         with:
-          browser: chrome
+          browser: ${{ env.BROWSER }}
           port: '4444'
           working-directory: ${{ env.CLIPBOARD }}
-          artifact-name: web-chrome-${{ env.COMPILER }}-clipboard-logs
-          # Never pass without results: Chrome writes text and PNG only.
+          artifact-name: web-${{ env.BROWSER }}-${{ env.COMPILER }}-clipboard-logs
+          # Never pass without results.
           require-result: '.telosnexWebTestSummary.passed >= 5'
           run: |
             args=()
             if [[ "$COMPILER" == dart2wasm ]]; then args+=(--wasm); fi
-            flutter drive --release -d web-server --browser-name chrome --driver-port 4444 \
+            flutter drive --release -d web-server --browser-name "$BROWSER" --driver-port 4444 \
               --driver test_driver/integration_test.dart \
               --target integration_test/clipboard_test.dart "${args[@]}"
       - name: Drag and drop, hot keys
@@ -177,15 +197,15 @@ jobs:
         if: success() || steps.clipboard.outcome == 'failure'
         uses: Telosnex/telosnex_ci_tools/actions/web-driver@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
         with:
-          browser: chrome
+          browser: ${{ env.BROWSER }}
           port: '4445'
           working-directory: ${{ env.DRAG }}
-          artifact-name: web-chrome-${{ env.COMPILER }}-drag-logs
+          artifact-name: web-${{ env.BROWSER }}-${{ env.COMPILER }}-drag-logs
           require-result: '.telosnexWebTestSummary.passed >= 4'
           run: |
             args=()
             if [[ "$COMPILER" == dart2wasm ]]; then args+=(--wasm); fi
-            flutter drive --release -d web-server --browser-name chrome --driver-port 4445 \
+            flutter drive --release -d web-server --browser-name "$BROWSER" --driver-port 4445 \
               --driver test_driver/integration_test.dart \
               --target integration_test/all_tests.dart "${args[@]}"
 
@@ -194,7 +214,26 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
+      BROWSER: chrome
       COMPILER: dart2wasm
+    steps: *web_steps
+
+  web-linux-firefox-dart2js:
+    name: Web Linux x64 Firefox dart2js
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      BROWSER: firefox
+      COMPILER: dart2js
+    steps: *web_steps
+
+  web-macos-safari-dart2js:
+    name: Web macOS ARM64 Safari dart2js
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      BROWSER: safari
+      COMPILER: dart2js
     steps: *web_steps
 
   android:
