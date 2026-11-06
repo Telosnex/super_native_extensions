@@ -225,12 +225,25 @@ class _WindowsMouse implements _Mouse {
   /// the app.
   static void _bringToFront(int window) {
     const vkMenu = 0x12; // Alt
+    const vkEscape = 0x1B;
     const keyUp = 0x0002; // KEYEVENTF_KEYUP
-    _keybdEvent(vkMenu, 0, 0, 0);
-    _keybdEvent(vkMenu, 0, keyUp, 0);
+    void tap(int key) {
+      _keybdEvent(key, 0, 0, 0);
+      _keybdEvent(key, 0, keyUp, 0);
+    }
+
     // HWND_TOPMOST, SWP_NOMOVE | SWP_NOSIZE.
     _setWindowPos(window, -1, 0, 0, 0, 0, 0x0002 | 0x0001);
-    _setForegroundWindow(window);
+    for (var i = 0; i < 10; i++) {
+      tap(vkMenu);
+      _setForegroundWindow(window);
+      sleep(const Duration(milliseconds: 200));
+      if (_getForegroundWindow() == window) return;
+      // A shell flyout in front (on windows-11-arm, Search): Escape
+      // dismisses it.
+      tap(vkEscape);
+      sleep(const Duration(milliseconds: 300));
+    }
   }
 
   static String _name(int window) => using((arena) {
