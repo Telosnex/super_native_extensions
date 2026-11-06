@@ -82,10 +82,11 @@ Pointer<Void> _cls(String name) =>
 Pointer<Void> _sel(String name) =>
     using((a) => _registerName(name.toNativeUtf8(allocator: a)));
 
-/// Whether this process can send AppKit events from Dart: macOS on ARM64
-/// (objc_msgSend returns structs in registers), on the main thread.
+/// Whether this process can send AppKit events from Dart: macOS, on the
+/// main thread. No call here returns a struct, so plain objc_msgSend works
+/// on ARM64 and x86_64 (objc_msgSend_stret is for struct returns).
 bool get canSendMacOSEvents {
-  if (!Platform.isMacOS || Abi.current() != Abi.macosArm64) return false;
+  if (!Platform.isMacOS) return false;
   return _sendBool(_cls('NSThread'), _sel('isMainThread'));
 }
 

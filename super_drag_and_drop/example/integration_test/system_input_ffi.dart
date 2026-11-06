@@ -7,6 +7,7 @@ import 'dart:isolate';
 import 'dart:ui';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart';
 
 /// Why system mouse input cannot be sent here, or null.
 String? get systemMouseUnavailable {
@@ -114,6 +115,15 @@ final _setCursorPos = _user32.lookupFunction<Int32 Function(Int32, Int32),
 final _setForegroundWindow =
     _user32.lookupFunction<Int32 Function(IntPtr), int Function(int)>(
         'SetForegroundWindow');
+final _getCursorPos = _user32.lookupFunction<Int32 Function(Pointer<_Point>),
+    int Function(Pointer<_Point>)>('GetCursorPos');
+final _windowFromPoint =
+    _user32.lookupFunction<IntPtr Function(_Point), int Function(_Point)>(
+        'WindowFromPoint');
+final _getForegroundWindow = _user32
+    .lookupFunction<IntPtr Function(), int Function()>('GetForegroundWindow');
+final _getAncestor = _user32.lookupFunction<IntPtr Function(IntPtr, Uint32),
+    int Function(int, int)>('GetAncestor');
 final _sendInput = _user32.lookupFunction<
     Uint32 Function(Uint32, Pointer<_MouseInput>, Int32),
     int Function(int, Pointer<_MouseInput>, int)>('SendInput');
@@ -141,12 +151,35 @@ class _WindowsMouse implements _Mouse {
         return (point.ref.x, point.ref.y);
       });
 
+  var _described = false;
+
   @override
   Future<void> move(Offset logical) async {
-    _setCursorPos(
-        _x + (logical.dx * _ratio).round(), _y + (logical.dy * _ratio).round());
+    final x = _x + (logical.dx * _ratio).round();
+    final y = _y + (logical.dy * _ratio).round();
+    _setCursorPos(x, y);
     _send(0x0001); // MOUSEEVENTF_MOVE by 0: a move message.
+    if (!_described) {
+      _described = true;
+      _describe(x, y);
+    }
   }
+
+  /// For a drag that does not start: where the cursor is, and whether the
+  /// app's window is under it and in front.
+  static void _describe(int x, int y) => using((arena) {
+        final point = arena<_Point>();
+        _getCursorPos(point);
+        final cursor = (point.ref.x, point.ref.y);
+        final app = _findWindow(
+            'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16(allocator: arena),
+            nullptr);
+        final under = _getAncestor(_windowFromPoint(point.ref), 2); // GA_ROOT
+        final front = _getForegroundWindow();
+        debugPrint('[system mouse] cursor $cursor (set ($x, $y)); '
+            'under it: ${under == app ? 'the app' : 'window $under'}; '
+            'in front: ${front == app ? 'the app' : 'window $front'}');
+      });
 
   @override
   Future<void> button({required bool down}) async {
