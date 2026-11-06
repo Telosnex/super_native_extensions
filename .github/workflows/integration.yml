@@ -83,36 +83,6 @@ jobs:
             run=(flutter test integration_test/clipboard_test.dart -d "$DEVICE" -r expanded)
             if [[ "$RUNNER_OS" == Linux ]]; then run=(xvfb-run -a "${run[@]}"); fi
             "${run[@]}"
-      # The windows-11-arm image shows a "Microsoft account" sign-in window
-      # in front of every app; the drag's mouse input goes to it. Topmost
-      # and SetForegroundWindow do not move the app in front of it.
-      - name: Close the sign-in window
-        if: (success() || steps.clipboard.outcome == 'failure') && runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          # A CoreWindow, not a process's main window: found by title.
-          Add-Type -Namespace W -Name U -MemberDefinition @'
-          [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-          public static extern IntPtr FindWindow(string c, string t);
-          [DllImport("user32.dll")]
-          public static extern uint GetWindowThreadProcessId(IntPtr h, out uint p);
-          [DllImport("user32.dll")]
-          public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
-          '@
-          for ($i = 0; $i -lt 10; $i++) {
-            $h = [W.U]::FindWindow($null, 'Microsoft account')
-            if ($h -eq [IntPtr]::Zero) { "no sign-in window"; break }
-            $p = 0; [void][W.U]::GetWindowThreadProcessId($h, [ref]$p)
-            $proc = Get-Process -Id $p -ErrorAction SilentlyContinue
-            "sign-in window $h, process $($proc.ProcessName) ($p)"
-            [void][W.U]::PostMessage($h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero) # WM_CLOSE
-            Start-Sleep -Seconds 1
-            if ([W.U]::FindWindow($null, 'Microsoft account') -ne [IntPtr]::Zero -and $proc) {
-              "closing $($proc.ProcessName) ($p)"
-              Stop-Process -Id $p -Force -ErrorAction SilentlyContinue
-              Start-Sleep -Seconds 1
-            }
-          }
       - name: Drag and drop, hot keys
         # Also after failed clipboard tests, not after a failed setup.
         if: success() || steps.clipboard.outcome == 'failure'

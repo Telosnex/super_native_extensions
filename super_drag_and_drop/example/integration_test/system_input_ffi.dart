@@ -142,6 +142,20 @@ final _getClassName = _user32.lookupFunction<
 final _getWindowText = _user32.lookupFunction<
     Int32 Function(IntPtr, Pointer<Utf16>, Int32),
     int Function(int, Pointer<Utf16>, int)>('GetWindowTextW');
+final _postMessage = _user32.lookupFunction<
+    Int32 Function(IntPtr, Uint32, IntPtr, IntPtr),
+    int Function(int, int, int, int)>('PostMessageW');
+final _getWindowThreadProcessId = _user32.lookupFunction<
+    Uint32 Function(IntPtr, Pointer<Uint32>),
+    int Function(int, Pointer<Uint32>)>('GetWindowThreadProcessId');
+final _kernel32 = DynamicLibrary.open('kernel32.dll');
+final _openProcess = _kernel32.lookupFunction<
+    IntPtr Function(Uint32, Int32, Uint32),
+    int Function(int, int, int)>('OpenProcess');
+final _terminateProcess = _kernel32.lookupFunction<
+    Int32 Function(IntPtr, Uint32), int Function(int, int)>('TerminateProcess');
+final _closeHandle = _kernel32
+    .lookupFunction<Int32 Function(IntPtr), int Function(int)>('CloseHandle');
 final _sendInput = _user32.lookupFunction<
     Uint32 Function(Uint32, Pointer<_MouseInput>, Int32),
     int Function(int, Pointer<_MouseInput>, int)>('SendInput');
@@ -161,6 +175,7 @@ class _WindowsMouse implements _Mouse {
             'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16(allocator: arena),
             nullptr);
         if (window == 0) throw StateError('no Flutter window');
+        _closeSignIn();
         _bringToFront(window);
         final child = _findWindowEx(
             window, 0, 'FLUTTERVIEW'.toNativeUtf16(allocator: arena), nullptr);
@@ -180,6 +195,28 @@ class _WindowsMouse implements _Mouse {
     _send(0x0001); // MOUSEEVENTF_MOVE by 0: a move message.
     if (notes.isEmpty) notes.add(_describe(x, y));
   }
+
+  /// Closes the "Microsoft account" sign-in window that the windows-11-arm
+  /// runner image opens in front of a new app: the drag's mouse input would
+  /// go to it. WM_CLOSE, then the end of its process.
+  static void _closeSignIn() => using((arena) {
+        final title = 'Microsoft account'.toNativeUtf16(allocator: arena);
+        for (var i = 0; i < 5; i++) {
+          final window = _findWindow(nullptr, title);
+          if (window == 0) return;
+          _postMessage(window, 0x0010, 0, 0); // WM_CLOSE
+          sleep(const Duration(milliseconds: 500));
+          if (_findWindow(nullptr, title) == 0) return;
+          final pid = arena<Uint32>();
+          _getWindowThreadProcessId(window, pid);
+          final process = _openProcess(0x0001, 0, pid.value); // TERMINATE
+          if (process != 0) {
+            _terminateProcess(process, 1);
+            _closeHandle(process);
+          }
+          sleep(const Duration(milliseconds: 500));
+        }
+      });
 
   /// Puts [window] in front of every other window, under the cursor.
   /// SetForegroundWindow alone can fail (the foreground lock: on
