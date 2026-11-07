@@ -8,7 +8,7 @@ environment:
   flutter: ">=3.44.0"
 
 dependencies:
-  code_assets: ^1.2.0
+  code_assets: ^2.2.0
   flutter:
     sdk: flutter
   flutter_web_plugins:
@@ -18,14 +18,14 @@ dependencies:
   collection: ^1.16.0
   path: ^1.8.2
   uuid: ^4.1.0
-  hooks: ^2.0.2
+  hooks: ^2.2.0
   crypto: ^3.0.6
   irondash_engine_context: ^0.6.0-dev.0
   irondash_message_channel: ^0.8.0-dev.0
   device_info_plus: ">=10.0.1 <14.0.0"
-  pixel_snap_fork: '>=0.1.5 <0.3.0'
+  pixel_snap_fork: '>=0.1.5 <2.0.0'
   web: ^1.0.0
-  kiln: ^0.1.1
+  kiln: ^1.0.0
 
 dev_dependencies:
   flutter_test:
