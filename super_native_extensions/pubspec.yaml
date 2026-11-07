@@ -20,7 +20,12 @@ dependencies:
   uuid: ^4.1.0
   hooks: ^2.2.0
   crypto: ^3.0.6
-  irondash_engine_context: ^0.6.0-dev.0
+  # The Telosnex fork requires code_assets 2.x, which kiln 1.x needs.
+  irondash_engine_context:
+    git:
+      url: https://github.com/Telosnex/irondash.git
+      path: engine_context/dart
+      ref: 2c615ae5cda4c17a2aeb6d02bcf0258d62c4eaa6
   irondash_message_channel: ^0.8.0-dev.0
   device_info_plus: ">=10.0.1 <14.0.0"
   pixel_snap_fork: '>=0.1.5 <2.0.0'
