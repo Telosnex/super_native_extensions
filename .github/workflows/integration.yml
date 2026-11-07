@@ -50,7 +50,7 @@ jobs:
       - name: Short path
         if: runner.os == 'Windows'
         run: subst "$ROOT" "$(cygpath -w "$GITHUB_WORKSPACE")"
-      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
       - name: Linux build dependencies, Xvfb and xdotool
         if: runner.os == 'Linux'
         run: |
@@ -74,7 +74,7 @@ jobs:
           dart run melos bootstrap
       - name: Clipboard
         id: clipboard
-        uses: Telosnex/telosnex_ci_tools/actions/watch@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+        uses: Telosnex/telosnex_ci_tools/actions/watch@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
         with:
           working-directory: ${{ env.ROOT }}/${{ env.CLIPBOARD }}
           # The first build (and a Rust source build) prints nothing for minutes.
@@ -86,7 +86,7 @@ jobs:
       - name: Drag and drop, hot keys
         # Also after failed clipboard tests, not after a failed setup.
         if: success() || steps.clipboard.outcome == 'failure'
-        uses: Telosnex/telosnex_ci_tools/actions/watch@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+        uses: Telosnex/telosnex_ci_tools/actions/watch@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
         with:
           working-directory: ${{ env.ROOT }}/${{ env.DRAG }}
           idle-minutes: '15'
@@ -168,7 +168,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
       # The workspace's melos (root pubspec.lock), through dart run: a
       # global melos 7+ wants a pub workspace, and on Windows a global melos
       # is melos.bat, which bash does not run as melos.
@@ -182,7 +182,7 @@ jobs:
       - name: Clipboard
         id: clipboard
         if: env.BROWSER == 'chrome'
-        uses: Telosnex/telosnex_ci_tools/actions/web-driver@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+        uses: Telosnex/telosnex_ci_tools/actions/web-driver@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
         with:
           browser: ${{ env.BROWSER }}
           port: '4444'
@@ -199,7 +199,7 @@ jobs:
       - name: Drag and drop, hot keys
         # Also after failed clipboard tests, not after a failed setup.
         if: success() || steps.clipboard.outcome == 'failure'
-        uses: Telosnex/telosnex_ci_tools/actions/web-driver@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+        uses: Telosnex/telosnex_ci_tools/actions/web-driver@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
         with:
           browser: ${{ env.BROWSER }}
           port: '4445'
@@ -249,7 +249,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
       # The workspace's melos (root pubspec.lock), through dart run: a
       # global melos 7+ wants a pub workspace, and on Windows a global melos
       # is melos.bat, which bash does not run as melos.
@@ -273,10 +273,10 @@ jobs:
           (cd "$CLIPBOARD" && flutter build apk --debug --target-platform android-x64 -t integration_test/clipboard_test.dart)
           (cd "$DRAG" && flutter build apk --debug --target-platform android-x64 -t integration_test/all_tests.dart)
       - id: emulator
-        uses: Telosnex/telosnex_ci_tools/actions/android-emulator@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+        uses: Telosnex/telosnex_ci_tools/actions/android-emulator@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
       - name: Clipboard
         id: clipboard
-        uses: Telosnex/telosnex_ci_tools/actions/watch@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+        uses: Telosnex/telosnex_ci_tools/actions/watch@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
         with:
           working-directory: ${{ env.CLIPBOARD }}
           idle-minutes: '15'
@@ -284,7 +284,7 @@ jobs:
       - name: Drag and drop, hot keys
         # Also after failed clipboard tests, not after a failed setup.
         if: success() || steps.clipboard.outcome == 'failure'
-        uses: Telosnex/telosnex_ci_tools/actions/watch@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+        uses: Telosnex/telosnex_ci_tools/actions/watch@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
         with:
           working-directory: ${{ env.DRAG }}
           idle-minutes: '15'
@@ -309,7 +309,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
       # The workspace's melos (root pubspec.lock), through dart run: a
       # global melos 7+ wants a pub workspace, and on Windows a global melos
       # is melos.bat, which bash does not run as melos.
@@ -317,13 +317,13 @@ jobs:
         run: |
           flutter pub get
           dart run melos bootstrap
-      - uses: Telosnex/telosnex_ci_tools/actions/ios-simulator-boot@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+      - uses: Telosnex/telosnex_ci_tools/actions/ios-simulator-boot@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
         id: simulator
       # No build ahead: Xcode rebuilds for flutter test's destination anyway.
       # One target per app: all_tests.dart has every test of the drag app.
       - name: Clipboard
         id: clipboard
-        uses: Telosnex/telosnex_ci_tools/actions/ios-flutter-test@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+        uses: Telosnex/telosnex_ci_tools/actions/ios-flutter-test@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
         with:
           working-directory: ${{ env.CLIPBOARD }}
           target: integration_test/clipboard_test.dart
@@ -331,13 +331,13 @@ jobs:
           artifact-name: ios-clipboard-logs
           idle-minutes: '15'
       # ios-flutter-test shuts its simulator down at the end: a new one.
-      - uses: Telosnex/telosnex_ci_tools/actions/ios-simulator-boot@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+      - uses: Telosnex/telosnex_ci_tools/actions/ios-simulator-boot@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
         id: simulator2
         if: success() || steps.clipboard.outcome == 'failure'
       - name: Drag and drop, hot keys
         # Also after failed clipboard tests, not after a failed setup.
         if: success() || steps.clipboard.outcome == 'failure'
-        uses: Telosnex/telosnex_ci_tools/actions/ios-flutter-test@4a798518378fb0c362ebe42940227560e6b4ecde # v0.5.8
+        uses: Telosnex/telosnex_ci_tools/actions/ios-flutter-test@46806695c593ec632eb26996046ea89649a1a6f7 # v0.5.9
         with:
           working-directory: ${{ env.DRAG }}
           target: integration_test/all_tests.dart
