@@ -289,6 +289,65 @@ jobs:
             ${{ steps.emulator.outputs.logcat }}
           if-no-files-found: ignore
 
+  # The clipboard and drag-and-drop examples on arm64 Android.
+  # Built on x64 (Google builds no arm64 Linux Android build tools), run in
+  # arm64 Android 15 in a container (actions/android-arm64-container).
+  test-apks:
+    name: Test APKs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Android NDK 28.2.13676358
+        run: |
+          if [[ ! -f "$ANDROID_HOME/ndk/28.2.13676358/source.properties" ]]; then
+            (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install 'ndk;28.2.13676358' > /dev/null
+          fi
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@c356a8d59e643d5fc8c552950fdd45c7e3bfea7f # v0.5.12
+      - name: Melos bootstrap
+        run: |
+          flutter pub get
+          dart run melos bootstrap
+      - uses: Telosnex/telosnex_ci_tools/actions/android-test-apks@c356a8d59e643d5fc8c552950fdd45c7e3bfea7f # v0.5.12
+        with:
+          working-directory: ${{ env.CLIPBOARD }}
+          targets: integration_test/clipboard_test.dart
+          artifact-name: android-test-apks-clipboard
+      - uses: Telosnex/telosnex_ci_tools/actions/android-test-apks@c356a8d59e643d5fc8c552950fdd45c7e3bfea7f # v0.5.12
+        with:
+          working-directory: ${{ env.DRAG }}
+          targets: integration_test/all_tests.dart
+          artifact-name: android-test-apks-drag
+
+  android-arm64:
+    name: Android ARM64 container
+    needs: test-apks
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Telosnex/telosnex_ci_tools/actions/setup-flutter@c356a8d59e643d5fc8c552950fdd45c7e3bfea7f # v0.5.12
+      - uses: Telosnex/telosnex_ci_tools/actions/download-artifact@c356a8d59e643d5fc8c552950fdd45c7e3bfea7f # v0.5.12
+        with:
+          pattern: android-test-apks-*
+          path: ${{ runner.temp }}/both
+      # One directory for both apps: the APK names differ.
+      - name: Merge the APKs
+        run: |
+          mkdir -p "$RUNNER_TEMP/apks"
+          for d in "$RUNNER_TEMP"/both/*/; do
+            cp "$d"*.apk "$RUNNER_TEMP/apks/"
+            cat "$d/apks.tsv" >> "$RUNNER_TEMP/apks/apks.tsv"
+          done
+      - uses: Telosnex/telosnex_ci_tools/actions/android-arm64-container@c356a8d59e643d5fc8c552950fdd45c7e3bfea7f # v0.5.12
+        with:
+          apks: ${{ runner.temp }}/apks
+          idle-minutes: '15'
+
   ios:
     name: iOS ARM64 simulator
     # macos-26 (Xcode 26.6): device_info_plus needs a newer iOS SDK than
