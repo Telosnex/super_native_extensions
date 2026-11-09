@@ -185,8 +185,8 @@ packages:
     dependency: transitive
     description:
       path: "engine_context/dart"
-      ref: "2c615ae5cda4c17a2aeb6d02bcf0258d62c4eaa6"
-      resolved-ref: "2c615ae5cda4c17a2aeb6d02bcf0258d62c4eaa6"
+      ref: "acee15491656863f3fd6710fef4902564f875a3b"
+      resolved-ref: "acee15491656863f3fd6710fef4902564f875a3b"
       url: "https://github.com/Telosnex/irondash.git"
     source: git
     version: "0.6.0-dev.0"
