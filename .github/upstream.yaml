@@ -1,0 +1,10 @@
+# Upstream sources, checked daily by the Upstream watch workflow
+# (telosnex_ci_tools, lib/src/upstream.dart). Set `seen` to skip an update.
+sources:
+  # The repository this one is a fork of. The pin is the last upstream commit
+  # merged here: update it with each merge. Alert once the oldest unmerged
+  # commit is a week old.
+  - name: superlistapp/super_native_extensions
+    branch: https://github.com/superlistapp/super_native_extensions
+    pin: 7670ae92d78776089291709896a753882cdb62f6
+    lag_days: 7
