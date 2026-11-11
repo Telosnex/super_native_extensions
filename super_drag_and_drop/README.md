@@ -201,6 +201,8 @@ Local data is always available.
 Note that `getValue` does not return a promise, instead it uses callback. This is intentional to avoid accidentally blocking `onPerformDrop` by awaiting the `getValue` result. Getting the value
 might take a while to complete and `onPerformDrop` will block the platform thread so it must return quickly.
 
+Start every read in `onPerformDrop`, but do not await the results there. Some drag sources provide their data only after the drag session ends, and the session cannot end while `onPerformDrop` is running. For example, the macOS screenshot thumbnail writes its promised file only after the drop. On macOS and iOS the platform thread waits for `onPerformDrop` for at most 1 second. After that the drag session ends and `onPerformDrop` keeps running. The reader stays valid until `onPerformDrop` completes.
+
 ## Data formats
 
 When it comes to providing and receiving drag data, `super_drag_and_drop` builds on top of `super_clipboard`. Please see `super_clipboard` [documentation](https://github.com/superlistapp/super_native_extensions/tree/main/super_clipboard#reading-from-clipboard) for more information about data formats.

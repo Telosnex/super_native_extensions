@@ -13,4 +13,5 @@ pub use os::*;
 #[allow(dead_code)]
 mod common;
 
+mod perform_drop_wait;
 mod progress_bridge;

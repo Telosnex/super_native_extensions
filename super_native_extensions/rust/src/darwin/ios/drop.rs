@@ -34,6 +34,7 @@ use crate::{
 };
 
 use super::{
+    super::perform_drop_wait::{wait_for_perform_drop, PerformDropWait, PERFORM_DROP_TIMEOUT},
     drag_common::DropOperationExt,
     util::{image_view_from_data, CGAffineTransformMakeScale, IgnoreInteractionEvents},
     PlatformDataReader,
@@ -209,12 +210,13 @@ impl Session {
                 done_clone.set(true);
             }),
         );
-        let mut poll_session = PollSession::new();
         let _ignore_events = IgnoreInteractionEvents::new();
-        while !done.get() {
-            RunLoop::current()
-                .platform_run_loop
-                .poll_once(&mut poll_session);
+        if wait_for_perform_drop(&done, PERFORM_DROP_TIMEOUT) == PerformDropWait::TimedOut {
+            log::warn!(
+                "onPerformDrop did not complete within {PERFORM_DROP_TIMEOUT:?}; \
+                 returning from performDrop so the drop session can end. \
+                 Start reads in onPerformDrop, but do not await them there."
+            );
         }
         Ok(())
     }

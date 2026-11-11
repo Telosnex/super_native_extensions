@@ -34,7 +34,12 @@ use crate::{
     value_promise::PromiseResult,
 };
 
-use super::{drag_common::DropOperationExt, util::class_builder_from_name, PlatformDataReader};
+use super::{
+    super::perform_drop_wait::{wait_for_perform_drop, PerformDropWait, PERFORM_DROP_TIMEOUT},
+    drag_common::DropOperationExt,
+    util::class_builder_from_name,
+    PlatformDataReader,
+};
 
 pub struct PlatformDropContext {
     id: PlatformDropContextId,
@@ -238,11 +243,12 @@ impl Session {
                 done_clone.set(true);
             }),
         );
-        let mut poll_session = PollSession::new();
-        while !done.get() {
-            RunLoop::current()
-                .platform_run_loop
-                .poll_once(&mut poll_session);
+        if wait_for_perform_drop(&done, PERFORM_DROP_TIMEOUT) == PerformDropWait::TimedOut {
+            log::warn!(
+                "onPerformDrop did not complete within {PERFORM_DROP_TIMEOUT:?}; \
+                 returning from performDragOperation so the drag session can end. \
+                 Start reads in onPerformDrop, but do not await them there."
+            );
         }
         Ok(true)
     }
