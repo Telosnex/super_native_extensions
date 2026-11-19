@@ -1,3 +1,5 @@
+// Keep the legacy import for Flutter versions before the Material split.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:super_keyboard_layout/super_keyboard_layout.dart';

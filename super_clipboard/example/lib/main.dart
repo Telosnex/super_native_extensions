@@ -1,6 +1,8 @@
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 
+// Keep the legacy import for Flutter versions before the Material split.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:super_clipboard/super_clipboard.dart';

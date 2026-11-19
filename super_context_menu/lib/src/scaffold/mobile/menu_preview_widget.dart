@@ -1,3 +1,5 @@
+// Keep the legacy import for Flutter versions before the Material split.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart' show CircularProgressIndicator, Colors;
 import 'package:flutter/widgets.dart';
 import 'package:super_native_extensions/widget_snapshot.dart';

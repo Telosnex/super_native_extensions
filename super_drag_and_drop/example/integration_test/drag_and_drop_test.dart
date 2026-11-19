@@ -5,6 +5,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+// Keep the legacy import for Flutter versions before the Material split.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
