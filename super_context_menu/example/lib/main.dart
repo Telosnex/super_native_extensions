@@ -1,3 +1,5 @@
+// Keep the legacy import for Flutter versions before the Material split.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:super_context_menu/super_context_menu.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
